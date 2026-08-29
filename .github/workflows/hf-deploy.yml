@@ -1,0 +1,46 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: Deploy to HuggingFace Space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install huggingface_hub
+      - name: Publish Space SZLHOLDINGS/khipu-lab
+        env:
+          HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, sys
+          token = os.environ.get("HF_TOKEN") or ""
+          if not token:
+              print("HF_TOKEN UNAVAILABLE — Space publish skipped. GitHub remains the source. Not fabricated LIVE.")
+              sys.exit(0)
+          from huggingface_hub import HfApi, create_repo
+          api = HfApi(token=token)
+          create_repo("SZLHOLDINGS/khipu-lab", repo_type="space", space_sdk="docker", exist_ok=True, token=token)
+          api.upload_folder(
+              folder_path=".",
+              repo_id="SZLHOLDINGS/khipu-lab",
+              repo_type="space",
+              ignore_patterns=[".git*", "node_modules/*", ".venv/*", "screenshots/*"],
+          )
+          print("published SZLHOLDINGS/khipu-lab")
+          PY

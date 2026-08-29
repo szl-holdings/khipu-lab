@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #080b10;
+  --color-background: #080b10;
+  --color-surface: #10151c;
+  --color-card: #10151c;
+  --color-elevated: #181e27;
+  --color-fg: #e8edf4;
+  --color-foreground: #e8edf4;
+  --color-muted: #8b96a6;
+  --color-subtle: #5c6778;
+  --color-accent: #8fd4c4;
+  --color-primary: #8fd4c4;
+  --color-accent-fg: #08110e;
+  --color-primary-foreground: #08110e;
+  --color-border: #232a35;
+  --color-border-strong: #323b4a;
+  --color-live: #7dba8a;
+  --color-open: #b9a078;
+  --color-blocked: #c17a72;
+  --color-destructive: #c17a72;
+  --color-unavail: #6b7380;
+  --color-ring: #8fd4c4;
+
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-sans: "Source Sans 3", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius: 12px;
+
+  --shadow-panel: 0 0 0 1px rgba(232, 237, 244, 0.08);
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body,
+  #app {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    min-height: 100%;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-feature-settings: "ss01" 1, "kern" 1;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.03em;
+    font-weight: 500;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chakana-mark {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><path fill='none' stroke='%238fd4c4' stroke-opacity='0.14' stroke-width='1.2' d='M32 8h16v8h8v8h8v16h-8v8h-8v8H32v-8h-8v-8h-8V24h8v-8h8z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 6% top 10%;
+    background-size: min(42vw, 260px);
+  }
+}
+
+@media (max-width: 1023px) {
+  .atlas-table {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .atlas-cards {
+    display: none;
+  }
+}
+
+@keyframes organ-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.organ-pulse {
+  animation: organ-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
