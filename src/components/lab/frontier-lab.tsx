@@ -15,6 +15,7 @@ import { runAyni } from "@/lib/math/ayni";
 import { countLive, runShard, SHARD_K, SHARD_N, toggleMask } from "@/lib/math/shard";
 import { evaluateBay } from "@/lib/math/bay";
 import { evaluateGreenLight } from "@/lib/math/greenlight";
+import { ARI } from "@/lib/szl/define";
 import {
   isNanCut,
   labNav,
@@ -642,6 +643,8 @@ function GreenStage({
 
   return (
     <div className="mt-4 space-y-4">
+      <p className="text-sm leading-relaxed text-muted">{ARI.define}</p>
+      <p className="text-sm leading-relaxed text-muted">{ARI.explain}</p>
       <div className="flex flex-wrap items-center gap-3">
         <ShieldCheck className="size-4 text-accent" />
         <span

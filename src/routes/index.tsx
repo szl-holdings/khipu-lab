@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/shell/app-shell";
 import { AtlasTable } from "@/components/atlas/table";
+import { DefineDual } from "@/components/atlas/define";
 import { Badge, HonestyChip, Panel, Button } from "@/components/ui/primitives";
 import { PLAYS } from "@/lib/types";
 import { ATLAS, LIVE_FRONTIERS } from "@/lib/atlas/catalog";
@@ -206,6 +207,17 @@ function Home() {
               {armLine}
             </p>
           ) : null}
+        </section>
+
+        <section>
+          <h2 className="font-display text-2xl">Define · two duals</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
+            Ari is signed yes. Kay Pacha is this world. Both are LIVE kernels in this tab — not copy,
+            not a 3D rehost, not a uniqueness theorem. Flip a failure. BLOCKED never writes the bound.
+          </p>
+          <div className="mt-4">
+            <DefineDual />
+          </div>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

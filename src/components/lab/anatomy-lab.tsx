@@ -3,6 +3,7 @@ import { Activity, Bone, Brain, Heart, Radio, Shield } from "lucide-react";
 import { Badge, HonestyChip, Panel } from "@/components/ui/primitives";
 import { evaluateAnatomy, ORGAN_SPEC, type OrganId, type OrganPulse } from "@/lib/math/anatomy";
 import { DOCTRINE } from "@/lib/szl/doctrine";
+import { KAYPACHA } from "@/lib/szl/define";
 import { RunBar } from "./run-bar";
 import type { RunFace } from "@/lib/run/execute";
 import { cn } from "@/lib/utils";
@@ -58,12 +59,18 @@ export function AnatomyLab({
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
           five organs · fail closed · not a 3D rehost
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Living substrate of a11oy and killinchu. Each organ is a real kernel already in this
-          estate. Any DOWN organ blocks the body. Λ stays Conjecture 1 OPEN. Energy stays
-          UNAVAILABLE. The public 3D atlas is a static visualization — this lab is the integrity
-          check.
-        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{KAYPACHA.define}</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{KAYPACHA.explain}</p>
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="font-mono text-[11px] uppercase tracking-widest text-subtle">Is</dt>
+            <dd className="mt-1 text-muted">{KAYPACHA.is.join(" · ")}</dd>
+          </div>
+          <div>
+            <dt className="font-mono text-[11px] uppercase tracking-widest text-subtle">Is not</dt>
+            <dd className="mt-1 text-muted">{KAYPACHA.isNot.join(" · ")}</dd>
+          </div>
+        </dl>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge tone={ev.blocked ? "blocked" : "live"}>
             {ev.liveCount}/5 {ev.blocked ? "BLOCKED" : "LIVE"}
