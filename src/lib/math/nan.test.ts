@@ -4,6 +4,8 @@ import { enqueueAll, drain, runChaski } from "./chaski.ts";
 import { runAyni } from "./ayni.ts";
 import { decodeRs, encodeRs, runShard, SHARD_K, SHARD_N } from "./shard.ts";
 import { evaluateBay, runBay } from "./bay.ts";
+import { evaluateGreenLight, runGreenLight } from "./greenlight.ts";
+import { digestTiles, runTileGrid, scheduleCover, tileSchedule } from "./tilegrid.ts";
 
 describe("chaski FIFO", () => {
   it("drain(enqueueAll([], msgs)) = msgs", () => {
@@ -89,5 +91,59 @@ describe("evidence bay", () => {
   it("RUNNING Space as receipt fail-closes", () => {
     const y = runBay({ spaceAsReceipt: 1 });
     assert.equal(y.blocked, 1);
+  });
+});
+
+describe("greenlight promotion", () => {
+  it("honest path green-lights and paints nothing", () => {
+    const ev = evaluateGreenLight({});
+    assert.equal(ev.greenlit, 1);
+    assert.equal(ev.painted, 0);
+    assert.equal(ev.provenTrust, false);
+    assert.equal(ev.energy, "UNAVAILABLE");
+    assert.equal(ev.conjecture1, "OPEN");
+    assert.ok(ev.checks.every((c) => c.ok));
+  });
+  it("painting a sorry is BLOCKED", () => {
+    const y = runGreenLight({ paintSorry: 1 });
+    assert.equal(y.greenlit, 0);
+    assert.ok(y.painted >= 1);
+    assert.equal(y.provenTrust, 0);
+  });
+  it("claiming proven_trust is BLOCKED and stays false", () => {
+    const ev = evaluateGreenLight({ claimProven: 1 });
+    assert.equal(ev.greenlit, 0);
+    assert.equal(ev.provenTrust, false);
+  });
+  it("fabricated joule is BLOCKED", () => {
+    const y = runGreenLight({ stampJoule: 1 });
+    assert.equal(y.blocked, 1);
+    assert.equal(y.energy, "UNAVAILABLE");
+  });
+});
+
+describe("tile digest schedule", () => {
+  it("clean Br=4 covers 8×8 exactly once", () => {
+    const tiles = tileSchedule(8, 4, 4);
+    assert.equal(tiles.length, 4);
+    assert.equal(scheduleCover(8, tiles), true);
+    const y = runTileGrid(8, 4, 4, 4, 0);
+    assert.equal(y.gridBreaks, 0);
+    assert.equal(y.ranDig, y.claimDig);
+  });
+  it("claiming a coarser Br fail-closes", () => {
+    const y = runTileGrid(8, 4, 4, 4, 1);
+    assert.equal(y.gridBreaks, 1);
+    assert.notEqual(y.ranDig, y.claimDig);
+  });
+  it("dropping the last K-tile leaves a cover hole", () => {
+    const y = runTileGrid(8, 4, 4, 4, 2);
+    assert.equal(y.cover, 0);
+    assert.equal(y.gridBreaks, 1);
+  });
+  it("digest includes n,d,Br,Bc,tiles", () => {
+    const a = digestTiles(8, 4, 4, 4, tileSchedule(8, 4, 4));
+    const b = digestTiles(8, 4, 2, 2, tileSchedule(8, 2, 2));
+    assert.notEqual(a, b);
   });
 });

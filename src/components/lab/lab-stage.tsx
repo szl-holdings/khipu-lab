@@ -101,7 +101,7 @@ export function LabStage({ play, cut }: { play: PlaySlug; cut?: string }) {
         </label>
       </div>
 
-      {play === "attn" && <AttnLab seed={seed} running={running} onRun={runKernel} />}
+      {play === "attn" && <AttnLab seed={seed} running={running} onRun={runKernel} cut={cut} />}
       {play === "yarqa" && <YarqaLab seed={seed} running={running} onRun={runKernel} />}
       {play === "lambda" && <LambdaLab seed={seed} running={running} onRun={runKernel} />}
       {play === "norm" && <NormLab seed={seed} running={running} onRun={runKernel} />}

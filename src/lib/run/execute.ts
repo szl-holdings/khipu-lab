@@ -1,4 +1,5 @@
 import { naiveAttn, tiledAttn, maskModAttn, futureMass } from "@/lib/math/attn";
+import { runTileGrid } from "@/lib/math/tilegrid";
 import { yarqaAttn } from "@/lib/math/yarqa";
 import { rmsNorm, blockKvGather } from "@/lib/math/norm";
 import { defaultYuyay, evaluateLambda } from "@/lib/math/lambda";
@@ -10,6 +11,7 @@ import { runChaski } from "@/lib/math/chaski";
 import { runAyni } from "@/lib/math/ayni";
 import { runShard, SHARD_N } from "@/lib/math/shard";
 import { runBay } from "@/lib/math/bay";
+import { runGreenLight } from "@/lib/math/greenlight";
 import { randomMat } from "@/lib/math/tensor";
 import type { Mat } from "@/lib/math/tensor";
 import type { PlaySlug } from "@/lib/types";
@@ -38,77 +40,52 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
     const Q = randomMat(n, d, seed, 0.6);
     const K = randomMat(n, d, seed + 3, 0.6);
     const V = randomMat(n, d, seed + 5, 0.6);
-    const tiled = tiledAttn(Q, K, V, tile, tile);
-    const naive = naiveAttn(Q, K, V);
-    const masked = maskModAttn(Q, K, V);
-    const causal = maskModAttn(Q, K, V, 0);
-    const pages = V;
-    const defaultTable = [0, 2, 4, 6, 1, 3, 5, 7];
-    const table = defaultTable.map((fallback, i) =>
-      Number.isFinite(params[`p${i}`]) ? params[`p${i}`] : fallback,
-    );
-    const gathered = blockKvGather(pages, table);
-    const maskFuture = futureMass(masked.probs);
-    const causalFuture = futureMass(causal.probs);
-    let residual = 0;
-    for (let i = 0; i < n; i++) {
-      for (let c = 0; c < d; c++) {
-        residual = Math.max(residual, Math.abs(tiled.out[i][c] - naive.out[i][c]));
-      }
-    }
-    let maskVsCausal = 0;
-    for (let i = 0; i < n; i++) {
-      for (let c = 0; c < d; c++) {
-        maskVsCausal = Math.max(maskVsCausal, Math.abs(masked.out[i][c] - causal.out[i][c]));
-      }
-    }
-    const differs = gathered.tableDigestSeed === defaultTable.join(",") ? 0 : 1;
-    const tableChanged = params.swapped === 1 ? 1 : differs;
-    const gatherRows = gathered.gathered.length;
-    const identity: Mat = Array.from({ length: n }, (_, i) =>
-      Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
-    );
-    const perm: Mat = Array.from({ length: n }, (_, i) =>
-      Array.from({ length: n }, (_, j) => (table[i] === j ? 1 : 0)),
-    );
-    const metrics: Record<string, number> = {
-      residual,
-      maskFuture,
-      pages: table.length,
-    };
-    const extra = {
-      gathered: gathered.gathered,
-      table,
-      digest: gathered.tableDigestSeed,
-      identity,
-      perm,
-      maskVsCausal,
-      causalFuture,
-      naiveFuture: futureMass(naive.probs),
-    };
 
     if (mode === 1) {
+      const masked = maskModAttn(Q, K, V);
+      const causal = maskModAttn(Q, K, V, 0);
+      const maskFuture = futureMass(masked.probs);
+      let maskVsCausal = 0;
+      for (let i = 0; i < n; i++) {
+        for (let c = 0; c < d; c++) {
+          maskVsCausal = Math.max(maskVsCausal, Math.abs(masked.out[i][c] - causal.out[i][c]));
+        }
+      }
       return {
-        metrics: { ...metrics, maskOffDiag: maskFuture },
+        metrics: { maskFuture, maskOffDiag: maskFuture, maskVsCausal },
         boundMetric: "maskFuture",
         boundEps: 1e-6,
         direction: "lte",
-        subjectId: "k.attn",
+        subjectId: "k.scoremod",
         version: 1,
         kind: "kernel",
         note: "ScoreMod causal mask · future mass vs 0 · not a FlexAttention rehost",
         heatmap: masked.probs,
-        extra,
+        extra: { causalFuture: futureMass(causal.probs), maskVsCausal },
       };
     }
+
     if (mode === 2) {
+      const defaultTable = [0, 2, 4, 6, 1, 3, 5, 7];
+      const table = defaultTable.map((fallback, i) =>
+        Number.isFinite(params[`p${i}`]) ? params[`p${i}`] : fallback,
+      );
+      const gathered = blockKvGather(V, table);
+      const differs = gathered.tableDigestSeed === defaultTable.join(",") ? 0 : 1;
+      const tableChanged = params.swapped === 1 ? 1 : differs;
       const expected = Number.isFinite(params.tableChanged) ? params.tableChanged : tableChanged;
+      const identity: Mat = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
+      );
+      const perm: Mat = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => (table[i] === j ? 1 : 0)),
+      );
       return {
-        metrics: { ...metrics, tableChanged, gatherRows },
+        metrics: { tableChanged, gatherRows: gathered.gathered.length, pages: table.length },
         boundMetric: "tableChanged",
         boundEps: expected,
         direction: expected === 1 ? "gte" : "lte",
-        subjectId: "k.attn",
+        subjectId: "k.blockwitness",
         version: 1,
         kind: "kernel",
         note:
@@ -116,11 +93,45 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
             ? "block-table digest changed"
             : "BlockWitness paged-KV gather · SHA-256 silhouette of SHA3 table digest · no tokens/s claim",
         heatmap: identity,
-        extra,
+        extra: { gathered: gathered.gathered, table, digest: gathered.tableDigestSeed, identity, perm },
       };
     }
+
+    const tiled = tiledAttn(Q, K, V, tile, tile);
+    const naive = naiveAttn(Q, K, V);
+    let residual = tiled.residual;
+    for (let i = 0; i < n; i++) {
+      for (let c = 0; c < d; c++) {
+        residual = Math.max(residual, Math.abs(tiled.out[i][c] - naive.out[i][c]));
+      }
+    }
+    const grid = runTileGrid(n, d, tile, tile, params.gridTamper ?? 0);
+
+    if (mode === 3) {
+      return {
+        metrics: {
+          gridBreaks: grid.gridBreaks,
+          cover: grid.cover,
+          residual,
+          tileCount: grid.tileCount,
+        },
+        boundMetric: "gridBreaks",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.tiledigest",
+        version: 1,
+        kind: "kernel",
+        note:
+          grid.gridBreaks === 0
+            ? "TileDigest holds · claimed schedule matches the run · not a FlashAttention rehost"
+            : "TileDigest BROKEN · claimed Br×Bc grid is not the schedule that ran",
+        heatmap: tiled.probs,
+        extra: { grid, tile },
+      };
+    }
+
     return {
-      metrics,
+      metrics: { residual, gridBreaks: grid.gridBreaks, cover: grid.cover },
       boundMetric: "residual",
       boundEps: 1e-5,
       direction: "lte",
@@ -129,7 +140,7 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
       kind: "kernel",
       note: "TileReceipt vs naive · SHA-256 silhouette of SHA3 chain · no speedup claim",
       heatmap: tiled.probs,
-      extra,
+      extra: { grid, tile, naiveFuture: futureMass(naive.probs) },
     };
   }
   if (play === "yarqa") {
@@ -296,6 +307,29 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
         kind: "kernel",
         note: y.reason,
         extra: { occupancy: y.occupancy, collapses: y.collapses },
+      };
+    }
+    if (cut === NAN_CUT.greenlight) {
+      const y = runGreenLight({
+        paintSorry: params.paintSorry ?? 0,
+        claimProven: params.claimProven ?? 0,
+        stampJoule: params.stampJoule ?? 0,
+      });
+      return {
+        metrics: {
+          painted: y.painted,
+          blocked: y.blocked,
+          greenlit: y.greenlit,
+          provenTrust: y.provenTrust,
+        },
+        boundMetric: "painted",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.greenlight",
+        version: 1,
+        kind: "kernel",
+        note: y.reason,
+        extra: { checks: y.checks, energy: y.energy, conjecture1: y.conjecture1 },
       };
     }
     const tax = loopTax(

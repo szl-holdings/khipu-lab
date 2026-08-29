@@ -63,7 +63,8 @@ export function tiledAttn(Q: Mat, K: Mat, V: Mat, Br = 4, Bc = 4): AttnResult {
   }
   const naive = naiveAttn(Q, K, V);
   const residual = maxAbs(sub(O, naive.out));
-  return { out: O, scores, probs: naive.probs, residual };
+  const probs = softmax(scores);
+  return { out: O, scores, probs, residual };
 }
 
 function sub(a: Mat, b: Mat): Mat {

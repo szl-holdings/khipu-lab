@@ -83,8 +83,8 @@ function RailsPage() {
         <section>
           <h2 className="font-display text-2xl">Where each Ñan cut lives</h2>
           <p className="mt-1 text-sm text-muted">
-            Chaski is a ROADMAP name on the proof registry. Ayni and ShardWitness are LIVE here
-            and not yet on a11oy.net. None of them are Hub weights.
+            Every beatable cut in this lab, on the three rails. Hub listings stay transport.
+            RECORD stays on a11oy.net. A GitHub green check is not a theorem.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[640px] text-left text-sm">
