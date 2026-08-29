@@ -17,6 +17,7 @@ export type PlaySlug =
   | "norm"
   | "khipu"
   | "moons"
+  | "infer"
   | "formula"
   | "frontier"
   | "anatomy";
@@ -147,6 +148,13 @@ export const PLAYS: Array<{
     quechua: "Yachay Ñawi",
     kind: "model",
     blurb: "2→8→2 MLP. Two moons. Live decision boundary.",
+  },
+  {
+    slug: "infer",
+    name: "Inference Bay",
+    quechua: "Riqsiy",
+    kind: "model",
+    blurb: "Kernel is truth. Nanos infer here. 1.5B QLoRA stays RESEARCH.",
   },
   {
     slug: "formula",

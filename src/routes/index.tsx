@@ -101,6 +101,9 @@ function Home() {
             <Link to="/lab/$play" params={{ play: "khipu" }}>
               <Button variant="quiet">Train TinyKhipu</Button>
             </Link>
+            <Link to="/lab/$play" params={{ play: "infer" }}>
+              <Button>Infer</Button>
+            </Link>
             <Link to="/lab/$play" params={{ play: "anatomy" }}>
               <Button variant="ghost">Walk anatomy</Button>
             </Link>
@@ -234,7 +237,7 @@ function Home() {
             kicker="East"
             body={`${ESTATE_MODELS.filter((m) => m.trainableHere).length} train here · rest RESEARCH`}
             to="/lab/$play"
-            params={{ play: "khipu" }}
+            params={{ play: "infer" }}
           />
           <Quad
             title="Formulas"

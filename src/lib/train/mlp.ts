@@ -95,6 +95,14 @@ export function stepMlp(w: MlpWeights, batch: Point[], lr: number) {
   return loss / n;
 }
 
+export function mlpFromBuffers(buffers?: Record<string, Float32Array> | null): MlpWeights | null {
+  if (!buffers) return null;
+  const { W1, b1, W2, b2 } = buffers;
+  if (!W1 || !b1 || !W2 || !b2) return null;
+  if (W1.length !== H * IN || b1.length !== H || W2.length !== OUT * H || b2.length !== OUT) return null;
+  return { W1, b1, W2, b2 };
+}
+
 export function finiteWeights(w: MlpWeights) {
   for (const arr of [w.W1, w.b1, w.W2, w.b2]) {
     for (let i = 0; i < arr.length; i++) if (!Number.isFinite(arr[i])) return false;

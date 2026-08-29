@@ -5,6 +5,7 @@ import {
   finiteWeights,
   forwardMlp,
   initMlp,
+  mlpFromBuffers,
   stepMlp,
   twoMoons,
   type MlpWeights,
@@ -12,14 +13,6 @@ import {
 import { RunBar } from "./run-bar";
 import type { RunFace } from "@/lib/run/execute";
 import { saveWeights, loadWeights } from "@/lib/persist/weights";
-
-function mlpFromBuffers(buffers?: Record<string, Float32Array> | null): MlpWeights | null {
-  if (!buffers) return null;
-  const { W1, b1, W2, b2 } = buffers;
-  if (!W1 || !b1 || !W2 || !b2) return null;
-  if (W1.length !== 16 || b1.length !== 8 || W2.length !== 16 || b2.length !== 2) return null;
-  return { W1, b1, W2, b2 };
-}
 
 export function MoonsLab({
   seed,
