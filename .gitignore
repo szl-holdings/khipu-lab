@@ -11,3 +11,4 @@ dist
 screenshots
 artifacts
 publish
+__pycache__/
