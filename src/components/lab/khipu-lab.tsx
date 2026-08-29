@@ -18,6 +18,16 @@ import {
   stepRa,
   synthRa,
 } from "@/lib/train/receipt-agent";
+import {
+  EMBED_D,
+  EMBED_V,
+  TOKS,
+  buildEmbed,
+  embedFromBuffers,
+  embedReplay,
+  nearest,
+  type EmbedTable,
+} from "@/lib/train/embed";
 import { loadWeights, saveWeights } from "@/lib/persist/weights";
 import { RunBar } from "./run-bar";
 import type { RunFace } from "@/lib/run/execute";
@@ -56,6 +66,11 @@ export function KhipuLab({
   const [raAgree, setRaAgree] = useState(0);
   const [raSteps, setRaSteps] = useState(0);
   const [raReloaded, setRaReloaded] = useState(false);
+  const [embed, setEmbed] = useState<EmbedTable | null>(null);
+  const [embedQuery, setEmbedQuery] = useState("YARQA");
+  const [embedHits, setEmbedHits] = useState<Array<{ tok: string; dist: number }>>([]);
+  const [embedReplayScore, setEmbedReplayScore] = useState<number | null>(null);
+  const [embedReloaded, setEmbedReloaded] = useState(false);
 
   useEffect(() => {
     const saved = loadWeights("m.khipu");
@@ -75,6 +90,15 @@ export function KhipuLab({
       setRaLoss([ra.loss]);
       setRaSteps(ra.steps);
       setRaReloaded(true);
+    }
+    const em = loadWeights("m.embed");
+    const et = embedFromBuffers(em?.buffers);
+    if (em && et) {
+      setEmbed(et);
+      const nn = nearest(et, "YARQA", 3);
+      setEmbedHits(nn.hits);
+      setEmbedReplayScore(embedReplay(et).replay);
+      setEmbedReloaded(true);
     }
   }, []);
 
@@ -176,6 +200,61 @@ export function KhipuLab({
     }
   }
 
+  async function buildTable() {
+    setRunning(true);
+    setEmbedReloaded(false);
+    try {
+      const t = buildEmbed(seed);
+      setEmbed(t);
+      const nn = nearest(t, embedQuery, 3);
+      const ev = embedReplay(t);
+      setEmbedHits(nn.hits);
+      setEmbedReplayScore(ev.replay);
+      saveWeights("m.embed", {
+        seed,
+        steps: 1,
+        loss: 1 - ev.replay,
+        buffers: { E: t.E },
+      });
+      await mint({
+        metrics: { replay: ev.replay, dim: EMBED_D, vocab: EMBED_V },
+        boundMetric: "replay",
+        boundEps: 1,
+        direction: "gte",
+        subjectId: "m.embed",
+        version: 1,
+        kind: "model",
+        note: "MiniEmbed-Nano table minted. Hash+table L2. Not Qwen. Not 3290×128.",
+      });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function inferEmbed() {
+    setRunning(true);
+    try {
+      const t = embed ?? buildEmbed(seed);
+      if (!embed) setEmbed(t);
+      const nn = nearest(t, embedQuery, 3);
+      const ev = embedReplay(t);
+      setEmbedHits(nn.hits);
+      setEmbedReplayScore(ev.replay);
+      await mint({
+        metrics: { replay: ev.replay, dim: EMBED_D, vocab: EMBED_V },
+        boundMetric: "replay",
+        boundEps: 1,
+        direction: "gte",
+        subjectId: "m.embed",
+        version: 1,
+        kind: "model",
+        note: "MiniEmbed-Nano nearest-neighbor. Self-NN replay. Not neural. Not 3290×128.",
+      });
+    } finally {
+      setRunning(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Panel>
@@ -232,8 +311,60 @@ export function KhipuLab({
           pass bar agree ≥ 0.90 held-out · kernel wins
         </p>
       </Panel>
+      <Panel>
+        <p className="text-sm text-muted">
+          MiniEmbed-Nano. Hash+table L2, V={EMBED_V} d={EMBED_D}. Self-NN replay is the bench. Not
+          neural. Not the 3290×128 MiniEmbed on szl-kernels. npz LIVE on Hub.
+        </p>
+        {embedReloaded && (
+          <p className="mt-2 font-mono text-xs text-live">reloaded last table</p>
+        )}
+        <dl className="mt-4 grid grid-cols-3 gap-3 font-mono text-xs tabular">
+          <div>
+            <dt className="text-subtle">table</dt>
+            <dd>{embed ? "LIVE" : "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-subtle">replay</dt>
+            <dd>{embedReplayScore == null ? "—" : embedReplayScore.toFixed(2)}</dd>
+          </div>
+          <div>
+            <dt className="text-subtle">query</dt>
+            <dd>{embedQuery}</dd>
+          </div>
+        </dl>
+        <div className="mt-3 flex flex-wrap gap-1">
+          {TOKS.map((tok) => (
+            <button
+              key={tok}
+              type="button"
+              onClick={() => {
+                setEmbedQuery(tok);
+                if (embed) setEmbedHits(nearest(embed, tok, 3).hits);
+              }}
+              className={`min-h-11 rounded-md border px-3 py-2 font-mono text-[11px] ${
+                embedQuery === tok
+                  ? "border-transparent bg-accent text-accent-fg"
+                  : "border-border bg-elevated text-muted"
+              }`}
+            >
+              {tok}
+            </button>
+          ))}
+        </div>
+        <ul className="mt-3 space-y-1 font-mono text-[11px] text-muted">
+          {embedHits.map((h) => (
+            <li key={h.tok}>
+              {h.tok} · L2 {h.dist.toFixed(4)}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 font-mono text-xs text-muted">pass bar replay = 1.00 on 16 named toks</p>
+      </Panel>
       <RunBar running={running} label="Train TinyKhipu" onRun={train} />
       <RunBar running={running} label="Train ReceiptAgent" onRun={trainRa} />
+      <RunBar running={running} label="Mint MiniEmbed table" onRun={buildTable} />
+      <RunBar running={running} label="Infer nearest" onRun={inferEmbed} />
     </div>
   );
 }

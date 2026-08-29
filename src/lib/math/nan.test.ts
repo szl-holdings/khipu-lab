@@ -5,6 +5,11 @@ import { runAyni } from "./ayni.ts";
 import { decodeRs, encodeRs, runShard, SHARD_K, SHARD_N } from "./shard.ts";
 import { evaluateBay, runBay } from "./bay.ts";
 import { evaluateGreenLight, runGreenLight } from "./greenlight.ts";
+import { evaluateInvariants, runInvariants } from "./invariants.ts";
+import { runGovSign } from "./govsign.ts";
+import { runPrefix } from "./prefix.ts";
+import { runRoute } from "./route.ts";
+import { buildEmbed, embedReplay, nearest } from "../train/embed.ts";
 import { digestTiles, runTileGrid, scheduleCover, tileSchedule } from "./tilegrid.ts";
 
 describe("chaski FIFO", () => {
@@ -119,6 +124,73 @@ describe("greenlight promotion", () => {
     const y = runGreenLight({ stampJoule: 1 });
     assert.equal(y.blocked, 1);
     assert.equal(y.energy, "UNAVAILABLE");
+  });
+});
+
+describe("doctrine invariants", () => {
+  it("honest path holds", () => {
+    const y = runInvariants();
+    assert.equal(y.hold, 1);
+    assert.equal(y.broken, 0);
+  });
+  it("paint sorry or fold lean fail-closes", () => {
+    assert.equal(runInvariants({ paintSorry: 1 }).blocked, 1);
+    assert.equal(runInvariants({ foldLean: 1 }).blocked, 1);
+  });
+  it("chain break fail-closes", () => {
+    const y = evaluateInvariants({ breakChain: 1 });
+    assert.equal(y.hold, 0);
+  });
+});
+
+describe("govsign envelope", () => {
+  it("honest envelope holds, STRUCTURAL-ONLY", () => {
+    const y = runGovSign(11, 0);
+    assert.equal(y.hold, 1);
+    assert.equal(y.signing, "STRUCTURAL-ONLY");
+  });
+  it("tamper after digest fail-closes", () => {
+    const y = runGovSign(11, 1);
+    assert.equal(y.hold, 0);
+    assert.equal(y.broken, 1);
+  });
+});
+
+describe("prefix witness", () => {
+  it("honest cache holds", () => {
+    const y = runPrefix(11, 0);
+    assert.equal(y.hold, 1);
+    assert.equal(y.broken, 0);
+    assert.equal(y.hit, "NAV");
+  });
+  it("poison after digest fail-closes", () => {
+    const y = runPrefix(11, 1);
+    assert.equal(y.hold, 0);
+    assert.equal(y.broken, 1);
+  });
+});
+
+describe("route witness", () => {
+  it("honest assignment holds", () => {
+    const y = runRoute(11, 0);
+    assert.equal(y.hold, 1);
+    assert.equal(y.assignment.length, 8);
+  });
+  it("expert swap after routing fail-closes", () => {
+    const y = runRoute(11, 1);
+    assert.equal(y.hold, 0);
+    assert.equal(y.broken, 1);
+  });
+});
+
+describe("miniembed nano", () => {
+  it("self-NN replay is 1 on named toks", () => {
+    const t = buildEmbed(11);
+    const ev = embedReplay(t);
+    assert.equal(ev.replay, 1);
+    const nn = nearest(t, "YARQA", 1);
+    assert.equal(nn.hits[0]?.tok, "YARQA");
+    assert.equal(nn.hits[0]?.dist, 0);
   });
 });
 

@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/shell/app-shell";
 import { AtlasTable } from "@/components/atlas/table";
 import { DefineDual } from "@/components/atlas/define";
+import { HubEstate } from "@/components/atlas/hub-estate";
 import { Badge, HonestyChip, Panel, Button } from "@/components/ui/primitives";
 import { PLAYS } from "@/lib/types";
 import { ATLAS, LIVE_FRONTIERS } from "@/lib/atlas/catalog";
@@ -292,6 +293,30 @@ function Home() {
                 { id: "ayni", lean: "F11", name: "Ayni Reciprocity", line: "Residual bus. A skip leak cannot pass." },
                 { id: "shard", lean: "F18", name: "ShardWitness", line: "RS(10,6) over GF(257). Need six of ten." },
                 { id: "bay", lean: "rails", name: "Evidence Bay", line: "Four rails. Collapse proof into product — BLOCKED." },
+                {
+                  id: "invariants",
+                  lean: "Kay",
+                  name: "Invariants",
+                  line: "Locked-8, OPEN uniqueness, UNAVAILABLE energy, chain. Break one — BLOCKED.",
+                },
+                {
+                  id: "govsign",
+                  lean: "DSSE",
+                  name: "GovEnvelope",
+                  line: "STRUCTURAL-ONLY. Tamper after digest — BLOCKED. Never a fake key.",
+                },
+                {
+                  id: "prefix",
+                  lean: "radix",
+                  name: "PrefixWitness",
+                  line: "Poison cached KV after the digest — BLOCKED. Not SGLang.",
+                },
+                {
+                  id: "route",
+                  lean: "MoE",
+                  name: "RouteWitness",
+                  line: "Swap an expert after routing — BLOCKED. Not Mixtral.",
+                },
               ] as const
             ).map((c) => (
               <button
@@ -349,6 +374,11 @@ function Home() {
               </Panel>
             ))}
           </div>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-display text-2xl">Hub estate</h2>
+          <HubEstate />
         </section>
 
         <section>

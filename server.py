@@ -22,8 +22,13 @@ JSON_PATHS = (
     "/api/lambda",
     "/api/greenlight",
     "/api/anatomy",
+    "/api/invariants",
+    "/api/govsign",
+    "/api/prefix",
+    "/api/route",
 )
 HTML_PATHS = ("/", "/index.html")
+STEMS = ("NAV", "NAV ABSTAIN", "YUYAY", "YUYAY WILLAY ARI")
 
 
 def lambda_aggregate(axes: list[float]) -> float:
@@ -51,6 +56,13 @@ def _flag(data: dict, *keys: str) -> int:
             return 1
         return 0
     return 0
+
+
+def _djb2(s: str) -> str:
+    h = 5381
+    for ch in s:
+        h = ((h << 5) + h + ord(ch)) & 0xFFFFFFFF
+    return f"{h:08x}"
 
 
 def evaluate_greenlight(data: dict) -> dict:
@@ -139,6 +151,176 @@ def evaluate_anatomy(data: dict) -> dict:
     }
 
 
+def evaluate_invariants(data: dict) -> dict:
+    paint_sorry = _flag(data, "paint_sorry", "paintSorry")
+    claim_proven = _flag(data, "claim_proven", "claimProven")
+    stamp_joule = _flag(data, "stamp_joule", "stampJoule")
+    break_chain = _flag(data, "break_chain", "breakChain")
+    fold_lean = _flag(data, "fold_lean", "foldLean")
+    checks = [
+        {
+            "id": "locked8",
+            "ok": paint_sorry != 1 and fold_lean != 1,
+            "detail": (
+                "BLOCKED · locked-proven is 8, not 21"
+                if paint_sorry == 1 or fold_lean == 1
+                else "locked-8 holds · F1 F4 F7 F11 F12 F18 F19 F22"
+            ),
+        },
+        {
+            "id": "conjecture1",
+            "ok": claim_proven != 1,
+            "detail": (
+                "BLOCKED · uniqueness remains Conjecture 1 OPEN"
+                if claim_proven == 1
+                else "Conjecture 1 OPEN · proven_trust locked false"
+            ),
+        },
+        {
+            "id": "energy",
+            "ok": stamp_joule != 1,
+            "detail": (
+                "BLOCKED · fabricated joule · energy UNAVAILABLE"
+                if stamp_joule == 1
+                else "energy UNAVAILABLE · never a fabricated joule"
+            ),
+        },
+        {
+            "id": "chain",
+            "ok": break_chain != 1,
+            "detail": (
+                "BLOCKED · receipt chain prev mismatch"
+                if break_chain == 1
+                else "chain head holds · SHA-256 silhouette"
+            ),
+        },
+    ]
+    broken = sum(1 for c in checks if not c["ok"])
+    blocked = broken > 0
+    return {
+        "broken": broken,
+        "blocked": blocked,
+        "hold": 0 if blocked else 1,
+        "proven_trust": False,
+        "energy": "UNAVAILABLE",
+        "checks": checks,
+        "kernel": "LIVE",
+        "reason": (
+            next((c["detail"] for c in checks if not c["ok"]), "invariants broken")
+            if blocked
+            else "INVARIANTS HOLD · LIVE · proven_trust false · energy UNAVAILABLE"
+        ),
+    }
+
+
+def evaluate_govsign(data: dict) -> dict:
+    seed = int(data.get("seed") or 11)
+    tamper = _flag(data, "tamper")
+    payload_type = "application/vnd.szl.khipu+json"
+    honest = json.dumps(
+        {
+            "seed": seed,
+            "proven_trust": False,
+            "energy": "UNAVAILABLE",
+            "conjecture_1": "OPEN",
+            "locked_proven": 8,
+        },
+        separators=(",", ":"),
+    )
+    digest = _djb2(f"{payload_type}:{honest}")
+    payload = honest.replace("OPEN", "PROVEN") if tamper == 1 else honest
+    now = _djb2(f"{payload_type}:{payload}")
+    hold = now == digest and tamper != 1
+    return {
+        "payloadType": payload_type,
+        "payload": payload,
+        "digest": digest,
+        "signing": "STRUCTURAL-ONLY",
+        "hold": 1 if hold else 0,
+        "broken": 0 if hold else 1,
+        "kernel": "LIVE",
+        "proven_trust": False,
+        "reason": (
+            "GovEnvelope HOLDS · STRUCTURAL-ONLY · UNSIGNED is honest · not Sigstore"
+            if hold
+            else "GovEnvelope BROKEN · payload mutated after digest · fail closed · never a fake signature"
+        ),
+    }
+
+
+def evaluate_prefix(data: dict) -> dict:
+    seed = int(data.get("seed") or 11)
+    hijack = _flag(data, "hijack")
+    query = str(data.get("query") or "NAV")
+    nodes = []
+    for prefix in STEMS:
+        kv = f"kv:{seed}:{prefix}"
+        nodes.append({"prefix": prefix, "kv": kv, "digest": _djb2(kv)})
+    claimed = "|".join(n["digest"] for n in nodes)
+    if hijack == 1:
+        nodes[0] = {**nodes[0], "kv": nodes[0]["kv"] + "#POISON"}
+    now = "|".join(_djb2(n["kv"]) for n in nodes)
+    hit = None
+    for n in nodes:
+        if query == n["prefix"] or query.startswith(n["prefix"] + " "):
+            if hit is None or len(n["prefix"]) > len(hit["prefix"]):
+                hit = n
+    hit_ok = hit is not None and _djb2(hit["kv"]) == hit["digest"]
+    hold = now == claimed and hit_ok and hijack != 1
+    return {
+        "hold": 1 if hold else 0,
+        "broken": 0 if hold else 1,
+        "hit": None if hit is None else hit["prefix"],
+        "query": query,
+        "nodes": nodes,
+        "kernel": "LIVE",
+        "reason": (
+            "PrefixWitness HOLDS · radix digest matches · not SGLang · no tokens/s claim"
+            if hold
+            else "PrefixWitness BROKEN · cached KV mutated after digest · fail closed · not a silent reuse"
+        ),
+    }
+
+
+def evaluate_route(data: dict) -> dict:
+    seed = int(data.get("seed") or 11)
+    tamper = _flag(data, "tamper")
+    n, e = 8, 4
+    # mulberry32 silhouette
+    state = seed & 0xFFFFFFFF
+    scores = []
+    for _ in range(n):
+        row = []
+        for _e in range(e):
+            state = (state * 0x6D2B79F5 + 1) & 0xFFFFFFFF
+            t = (state ^ (state >> 15)) & 0xFFFFFFFF
+            row.append((t >> 9) / 8388608.0)
+        scores.append(row)
+    assignment = [row.index(max(row)) for row in scores]
+    digest = _djb2(",".join(str(x) for x in assignment))
+    routed = list(assignment)
+    if tamper == 1:
+        routed[0] = (routed[0] + 1) % e
+    now = _djb2(",".join(str(x) for x in routed))
+    hold = now == digest and tamper != 1
+    load = [0] * e
+    for x in routed:
+        load[x] += 1
+    return {
+        "hold": 1 if hold else 0,
+        "broken": 0 if hold else 1,
+        "assignment": routed,
+        "load": load,
+        "digest": digest,
+        "kernel": "LIVE",
+        "reason": (
+            "RouteWitness HOLDS · assignment digest matches · not Mixtral · no tokens/s claim"
+            if hold
+            else "RouteWitness BROKEN · expert swapped after routing · fail closed · not a silent MoE rehost"
+        ),
+    }
+
+
 def _query_body(path: str) -> dict:
     qs = parse_qs(urlparse(path).query)
     body: dict = {}
@@ -147,6 +329,16 @@ def _query_body(path: str) -> dict:
     if "axes" in body and isinstance(body["axes"], str):
         body["axes"] = [float(x) for x in body["axes"].split(",") if x]
     return body
+
+
+ROUTES = {
+    "/api/greenlight": evaluate_greenlight,
+    "/api/anatomy": evaluate_anatomy,
+    "/api/invariants": evaluate_invariants,
+    "/api/govsign": evaluate_govsign,
+    "/api/prefix": evaluate_prefix,
+    "/api/route": evaluate_route,
+}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -221,11 +413,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/lambda":
             self._lambda(body)
             return
-        if path == "/api/greenlight":
-            self._json(200, evaluate_greenlight(body))
-            return
-        if path == "/api/anatomy":
-            self._json(200, evaluate_anatomy(body))
+        if path in ROUTES:
+            self._json(200, ROUTES[path](body))
             return
         self._send(404, b"not found", "text/plain")
 
@@ -242,11 +431,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/lambda":
             self._lambda(data)
             return
-        if path == "/api/greenlight":
-            self._json(200, evaluate_greenlight(data))
-            return
-        if path == "/api/anatomy":
-            self._json(200, evaluate_anatomy(data))
+        if path in ROUTES:
+            self._json(200, ROUTES[path](data))
             return
         self._send(404, b"not found", "text/plain")
 

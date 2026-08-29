@@ -31,7 +31,7 @@
   <header>
     <p class="kicker">SZL Holdings · Knot the run · Hash the proof</p>
     <h1>KHIPU lab</h1>
-    <p class="muted">Holographic kernel atlas. Full TanStack app lives on GitHub. This Space boots without npm. Λ uniqueness is Conjecture 1 — never a theorem. Energy UNAVAILABLE. proven_trust false.</p>
+    <p class="muted">Holographic kernel atlas. Full TanStack app lives on GitHub. This Space boots without npm. Λ uniqueness is Conjecture 1 — never a theorem. Energy UNAVAILABLE. proven_trust false. Not Qwen. Not 1.5B.</p>
   </header>
   <main>
     <section class="card">
@@ -52,6 +52,44 @@
       </div>
     </section>
     <section class="card" style="margin-top:12px">
+      <h2>Invariants · Kay</h2>
+      <p class="muted">Locked-8, OPEN uniqueness, UNAVAILABLE energy, chain. Break one — BLOCKED. Not pytest.</p>
+      <p class="mono" id="inv">—</p>
+      <div class="row">
+        <button type="button" id="inv-paint">Paint a sorry green</button>
+        <button type="button" id="inv-fold">Fold Lean into locked-8</button>
+        <button type="button" id="inv-chain">Break receipt chain</button>
+        <button type="button" class="primary" id="push-inv">Check invariants</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:12px">
+      <h2>GovEnvelope · Sello</h2>
+      <p class="muted">STRUCTURAL-ONLY. Tamper after digest — BLOCKED. Never a fake key.</p>
+      <p class="mono" id="gov">—</p>
+      <div class="row">
+        <button type="button" id="gov-tamper">Mutate payload after digest</button>
+        <button type="button" class="primary" id="push-gov">Seal envelope</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:12px">
+      <h2>PrefixWitness · radix</h2>
+      <p class="muted">Cached prefix KV is digested. Poison after the digest — BLOCKED. Not SGLang.</p>
+      <p class="mono" id="prefix">—</p>
+      <div class="row">
+        <button type="button" id="prefix-hijack">Poison cached KV</button>
+        <button type="button" class="primary" id="push-prefix">Check prefix cache</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:12px">
+      <h2>RouteWitness · MoE</h2>
+      <p class="muted">Expert assignment is digested. Swap after routing — BLOCKED. Not Mixtral.</p>
+      <p class="mono" id="route">—</p>
+      <div class="row">
+        <button type="button" id="route-tamper">Swap expert 0</button>
+        <button type="button" class="primary" id="push-route">Check expert route</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:12px">
       <h2>Anatomy · five organs</h2>
       <p class="muted">Any DOWN organ or WILLAY veto blocks the body. Not a 3D rehost.</p>
       <p class="mono" id="anatomy">—</p>
@@ -65,6 +103,8 @@
     <h2>Organs</h2>
     <div class="grid">
       <a class="card" href="https://huggingface.co/spaces/SZLHOLDINGS/szl-khipu">szl-khipu kernels</a>
+      <a class="card" href="https://huggingface.co/SZLHOLDINGS/TinyKhipu-Nano">TinyKhipu-Nano npz</a>
+      <a class="card" href="https://huggingface.co/SZLHOLDINGS/MiniEmbed-Nano">MiniEmbed-Nano npz</a>
       <a class="card" href="https://holdings.a-11-oy.com/khipu/">Python FE+BE silhouette</a>
       <a class="card" href="https://github.com/szl-holdings/khipu-lab">GitHub source</a>
       <a class="card" href="https://a-11-oy.com">Product</a>
@@ -74,6 +114,10 @@
     const axes = Array(13).fill(0.90); axes[0]=0.95; axes[1]=0.95;
     const box = document.getElementById("sliders");
     const flags = { paint_sorry:0, claim_proven:0, stamp_joule:0 };
+    const inv = { paint_sorry:0, fold_lean:0, break_chain:0, claim_proven:0, stamp_joule:0 };
+    const gov = { tamper:0 };
+    const prefix = { hijack:0 };
+    const route = { tamper:0 };
     function render() {
       box.innerHTML = axes.map((v,i)=>`<label class="muted mono">A${i+1} ${v.toFixed(2)}<input type="range" min="0.5" max="1" step="0.01" value="${v}" data-i="${i}"></label>`).join("");
       box.querySelectorAll("input").forEach(el => el.oninput = (e) => { axes[+e.target.dataset.i] = +e.target.value; ping(); render(); });
@@ -94,6 +138,30 @@
       el.textContent = (j.blocked ? "BLOCKED" : "GREEN-LIGHT") + " · " + (j.reason||"");
       el.className = "mono" + (j.blocked ? " down" : "");
     }
+    async function invariants() {
+      const j = await post("/api/invariants", inv);
+      const el = document.getElementById("inv");
+      el.textContent = (j.hold ? "HOLD" : "BROKEN") + " · " + (j.reason||"");
+      el.className = "mono" + (j.hold ? "" : " down");
+    }
+    async function govsign() {
+      const j = await post("/api/govsign", gov);
+      const el = document.getElementById("gov");
+      el.textContent = (j.hold ? "SEALED" : "BROKEN") + " · " + (j.reason||"");
+      el.className = "mono" + (j.hold ? "" : " down");
+    }
+    async function prefixRun() {
+      const j = await post("/api/prefix", prefix);
+      const el = document.getElementById("prefix");
+      el.textContent = (j.hold ? "CACHE HOLDS" : "HIJACKED") + " · " + (j.reason||"");
+      el.className = "mono" + (j.hold ? "" : " down");
+    }
+    async function routeRun() {
+      const j = await post("/api/route", route);
+      const el = document.getElementById("route");
+      el.textContent = (j.hold ? "ROUTE HOLDS" : "SWAPPED") + " · " + (j.reason||"");
+      el.className = "mono" + (j.hold ? "" : " down");
+    }
     async function anatomy(extra) {
       const j = await post("/api/anatomy", extra||{});
       const el = document.getElementById("anatomy");
@@ -103,21 +171,31 @@
         `<div class="org ${o.status==="DOWN"?"down":""}"><b>${o.id}</b><br>${o.status}</div>`
       ).join("");
     }
-    function toggle(btn, key) {
+    function toggle(btn, bag, key, run) {
       btn.onclick = () => {
-        flags[key] = flags[key] ? 0 : 1;
-        btn.classList.toggle("on", !!flags[key]);
-        green();
+        bag[key] = bag[key] ? 0 : 1;
+        btn.classList.toggle("on", !!bag[key]);
+        run();
       };
     }
-    toggle(document.getElementById("paint"), "paint_sorry");
-    toggle(document.getElementById("claim"), "claim_proven");
-    toggle(document.getElementById("joule"), "stamp_joule");
+    toggle(document.getElementById("paint"), flags, "paint_sorry", green);
+    toggle(document.getElementById("claim"), flags, "claim_proven", green);
+    toggle(document.getElementById("joule"), flags, "stamp_joule", green);
+    toggle(document.getElementById("inv-paint"), inv, "paint_sorry", invariants);
+    toggle(document.getElementById("inv-fold"), inv, "fold_lean", invariants);
+    toggle(document.getElementById("inv-chain"), inv, "break_chain", invariants);
+    toggle(document.getElementById("gov-tamper"), gov, "tamper", govsign);
+    toggle(document.getElementById("prefix-hijack"), prefix, "hijack", prefixRun);
+    toggle(document.getElementById("route-tamper"), route, "tamper", routeRun);
     document.getElementById("push-green").onclick = green;
+    document.getElementById("push-inv").onclick = invariants;
+    document.getElementById("push-gov").onclick = govsign;
+    document.getElementById("push-prefix").onclick = prefixRun;
+    document.getElementById("push-route").onclick = routeRun;
     document.getElementById("walk").onclick = () => anatomy({});
     document.getElementById("kill-heart").onclick = () => anatomy({zero_heart:true});
     document.getElementById("fake-joule").onclick = () => anatomy({fabricate_joule:true});
-    render(); ping(); green(); anatomy({});
+    render(); ping(); green(); invariants(); govsign(); prefixRun(); routeRun(); anatomy({});
   </script>
 </body>
 </html>
