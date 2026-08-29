@@ -1,7 +1,8 @@
 /** Three origins. One product name. Never a11oy.com. */
 
-export type RailStatus = "LIVE" | "REPORTED" | "ROADMAP" | "UNAVAILABLE" | "NEVER";
+import { CUTS, type RailStatus } from "./cuts";
 
+export type { RailStatus };
 export type OriginId = "hub" | "proof" | "product";
 
 export const ORIGINS: Record<
@@ -47,86 +48,11 @@ export type CutPublication = {
   whatNot: string;
 };
 
-/** Honest as of the live a11oy.net/atlas.json snapshot (REPORTED). */
-export const CUT_PUBLICATION: CutPublication[] = [
-  {
-    frontierId: "tilereceipt",
-    name: "TileReceipt",
-    lab: "LIVE",
-    hub: "REPORTED",
-    hubUrl: "https://huggingface.co/SZLHOLDINGS/szl-receipt-attn",
-    proof: "ROADMAP",
-    proofNote: "KERNEL original on a11oy.net GitHub surfaces · ROADMAP",
-    product: "NEVER",
-    whatNot: "Not a FlashAttention rehost. No tokens/s claim.",
-  },
-  {
-    frontierId: "canal",
-    name: "Canal Compartment",
-    lab: "LIVE",
-    hub: "REPORTED",
-    hubUrl: "https://huggingface.co/SZLHOLDINGS/YARQA-ATTN",
-    proof: "ROADMAP",
-    proofNote: "Named in a11oy.net roadmap_cuts as YARQA-ATTN",
-    product: "NEVER",
-    whatNot: "Not SageAttention. GPU cubins UNAVAILABLE.",
-  },
-  {
-    frontierId: "chaski",
-    name: "Chaski FIFO",
-    lab: "LIVE",
-    hub: "UNAVAILABLE",
-    hubUrl: null,
-    proof: "ROADMAP",
-    proofNote: "Name listed in a11oy.net roadmap_cuts. No RECORD row. Not weights.",
-    product: "NEVER",
-    whatNot: "Do not mint a Hub model card. This is a kernel, not a checkpoint.",
-  },
-  {
-    frontierId: "ayni",
-    name: "Ayni Reciprocity",
-    lab: "LIVE",
-    hub: "UNAVAILABLE",
-    hubUrl: null,
-    proof: "UNAVAILABLE",
-    proofNote: "Not in a11oy.net/atlas.json. Draft pointer only, from this lab.",
-    product: "NEVER",
-    whatNot: "Not a ResNet. Not ImageNet. Not a Hub weight.",
-  },
-  {
-    frontierId: "shard",
-    name: "ShardWitness",
-    lab: "LIVE",
-    hub: "UNAVAILABLE",
-    hubUrl: null,
-    proof: "UNAVAILABLE",
-    proofNote: "Not in a11oy.net/atlas.json. Draft pointer only, from this lab.",
-    product: "NEVER",
-    whatNot: "CHECKED ≠ Lean F18 PROVEN. Not RAID.",
-  },
-  {
-    frontierId: "bay",
-    name: "Evidence Bay",
-    lab: "LIVE",
-    hub: "UNAVAILABLE",
-    hubUrl: null,
-    proof: "UNAVAILABLE",
-    proofNote: "The rail split is doctrine. This kernel is new. No RECORD row yet.",
-    product: "NEVER",
-    whatNot: "A RUNNING Space is transport, not proof. Never a11oy.com.",
-  },
-  {
-    frontierId: "organ",
-    name: "Organ Integrity",
-    lab: "LIVE",
-    hub: "REPORTED",
-    hubUrl: "https://huggingface.co/spaces/SZLHOLDINGS/anatomy",
-    proof: "REPORTED",
-    proofNote: "Anatomy is a Hub Space + GitHub. RECORD stays on a11oy.net.",
-    product: "REPORTED",
-    whatNot: "3D atlas is visualization. This lab is the integrity kernel.",
-  },
-];
+export const CUT_PUBLICATION: CutPublication[] = CUTS.map((c) => ({
+  frontierId: c.id,
+  name: c.name,
+  ...c.rails,
+}));
 
 export function statusTone(
   s: RailStatus,

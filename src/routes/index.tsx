@@ -8,7 +8,7 @@ import { ATLAS, LIVE_FRONTIERS } from "@/lib/atlas/catalog";
 import { ESTATE_MODELS } from "@/lib/catalog/models";
 import { LOCKED_EIGHT } from "@/lib/catalog/formulas";
 import { DOCTRINE } from "@/lib/szl/doctrine";
-import { labNav } from "@/lib/catalog/plays";
+import { labNav, cutBySubject } from "@/lib/catalog/plays";
 import { useLab } from "@/store/lab";
 import { Chakana } from "@/components/shell/chakana";
 import { runPlay } from "@/lib/run/execute";
@@ -45,16 +45,14 @@ function Home() {
         mint: async (play, face) => {
           await mintFromMetrics(play, face, ARM_SEED);
           done += 1;
-          const meta = PLAYS.find((p) => p.slug === play);
-          const residual = face.metrics.residual;
-          const metricName = typeof residual === "number" ? "residual" : face.boundMetric;
-          const metricVal = typeof residual === "number" ? residual : face.metrics[face.boundMetric];
+          const cut = cutBySubject(face.subjectId);
+          const metricVal = face.metrics[face.boundMetric];
           const shown =
             typeof metricVal === "number" && Number.isFinite(metricVal)
               ? metricVal.toExponential(2)
               : "—";
           setArmLine(
-            `armed ${done}/${ARM_JOBS.length} · ${meta?.quechua ?? play} ${metricName} ${shown}`,
+            `armed ${done}/${ARM_JOBS.length} · ${cut?.name ?? play} ${face.boundMetric} ${shown}`,
           );
         },
       });
@@ -92,7 +90,7 @@ function Home() {
             <Button type="button" disabled={busy} onClick={() => void onArmEstate()}>
               {arming ? "Arming…" : "Arm estate"}
             </Button>
-            <Link to="/lab/$play" params={{ play: "frontier" }} search={{ cut: "chaski" }}>
+            <Link to="/lab/$play" params={{ play: "frontier" }} search={{ cut: "greenlight" }}>
               <Button>Push Ñan</Button>
             </Link>
             <Link to="/lab/$play" params={{ play: "moons" }}>
@@ -258,11 +256,17 @@ function Home() {
         <section>
           <h2 className="font-display text-2xl">New Ñan cuts</h2>
           <p className="mt-1 text-sm text-muted">
-            Locked-8 silhouettes that actually run. Beat the bound in the Ñan lab.
+            Locked-8 silhouettes that actually run. GreenLight will not paint a sorry.
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {(
               [
+                {
+                  id: "greenlight",
+                  lean: "Ari",
+                  name: "GreenLight",
+                  line: "Signed assent. A sorry cannot be painted green.",
+                },
                 { id: "chaski", lean: "F7", name: "Chaski FIFO", line: "Hash-chained runner. Reorder is BLOCKED." },
                 { id: "ayni", lean: "F11", name: "Ayni Reciprocity", line: "Residual bus. A skip leak cannot pass." },
                 { id: "shard", lean: "F18", name: "ShardWitness", line: "RS(10,6) over GF(257). Need six of ten." },

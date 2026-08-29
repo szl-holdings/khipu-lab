@@ -6,7 +6,7 @@ import { ATLAS } from "@/lib/atlas/catalog";
 import { ESTATE_MODELS } from "@/lib/catalog/models";
 import { useLab } from "@/store/lab";
 import { KhipuCord, VerdictBadge } from "@/components/receipt/khipu-cord";
-import { labNav } from "@/lib/catalog/plays";
+import { labNav, CUT_BY_SUBJECT, CUT_BY_ID } from "@/lib/catalog/plays";
 import { shortHex } from "@/lib/crypto/receipt";
 import { downloadJson, ledgerBundle } from "@/lib/export/bundle";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,17 @@ function InspectPage() {
   const frontiers = useLab((s) => s.frontiers);
   const receipts = ledger.filter((r) => r.subject.id === id || r.subject.kind === kind);
   const last = receipts[0];
-  const row = ATLAS.find((r) => r.id === id || r.szl === id || `k.${r.frontierId}` === id);
+  const cut = CUT_BY_SUBJECT[id] ?? CUT_BY_ID[id];
+  const row = ATLAS.find(
+    (r) =>
+      r.id === id ||
+      r.szl === id ||
+      r.frontierId === id ||
+      r.frontierId === cut?.id ||
+      `k.${r.frontierId}` === id ||
+      `f.${r.frontierId}` === id ||
+      `m.${r.frontierId}` === id,
+  );
   const model = ESTATE_MODELS.find((m) => m.id === id || m.hub.endsWith(id));
 
   function exportLedger() {

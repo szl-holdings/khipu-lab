@@ -3,22 +3,9 @@ import { runGate } from "@/lib/gate/lambda";
 import type { PlaySlug, Receipt } from "@/lib/types";
 import { ledgerHead, useLab } from "@/store/lab";
 import type { RunFace } from "@/lib/run/execute";
-import { frontierForSubject, NAN_CUT } from "@/lib/catalog/plays";
+import { ARM_JOBS, cutBySubject, frontierForSubject } from "@/lib/catalog/cuts";
 
-/** Kernel plays armed from Tinkuy. Moons / TinyKhipu stay user-initiated. */
-export const ARM_JOBS: Array<{ play: PlaySlug; params?: Record<string, number> }> = [
-  { play: "attn" },
-  { play: "yarqa" },
-  { play: "lambda" },
-  { play: "norm" },
-  { play: "formula" },
-  { play: "frontier", params: { allow: 1, lambdaPass: 1 } },
-  { play: "frontier", params: { cut: NAN_CUT.chaski } },
-  { play: "frontier", params: { cut: NAN_CUT.ayni } },
-  { play: "frontier", params: { cut: NAN_CUT.shard } },
-  { play: "frontier", params: { cut: NAN_CUT.bay } },
-  { play: "anatomy" },
-];
+export { ARM_JOBS };
 
 export const ARM_PLAYS: PlaySlug[] = [...new Set(ARM_JOBS.map((j) => j.play))];
 
@@ -26,6 +13,7 @@ export const ARM_SEED = 11;
 
 export type ArmRow = {
   play: string;
+  cut?: string;
   residual?: number;
   verdictNote: string;
 };
@@ -96,21 +84,12 @@ export async function armEstate(opts: {
     await yieldPaint();
     const face = runPlay(job.play, ARM_SEED, job.params);
     await mint(job.play, face);
-    const residual =
-      typeof face.metrics.residual === "number"
-        ? face.metrics.residual
-        : typeof face.metrics.worstResidual === "number"
-          ? face.metrics.worstResidual
-          : typeof face.metrics.broken === "number"
-            ? face.metrics.broken
-            : typeof face.metrics.leak === "number"
-              ? face.metrics.leak
-              : typeof face.metrics.recovered === "number"
-                ? face.metrics.recovered
-                : undefined;
+    const metric = face.metrics[face.boundMetric];
+    const cut = cutBySubject(face.subjectId);
     summary.push({
       play: job.play,
-      residual,
+      cut: cut?.id,
+      residual: typeof metric === "number" ? metric : undefined,
       verdictNote: face.note,
     });
     await yieldPaint();
