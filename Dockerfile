@@ -1,14 +1,23 @@
 # SZL KHIPU lab — Hugging Face Space (port 7860)
-# The previous image ran `npm ci` against public.ecr.aws + Playwright
-# postinstall and BUILD_ERRORed on the HF factory (same failure class as
-# leftover vite-dev NEXUS). Ignore install scripts, pull Node from GCR
-# (the pin anatomy already uses), and copy the env file the wrapper reads.
+#
+# Factory class that keeps this Space in BUILD_ERROR:
+#   1. FROM public.ecr.aws — HF builders cannot pull ECR Public reliably (exit 128).
+#   2. npm ci running Playwright postinstall against a missing browser cache.
+#   3. COPY .grok — that directory is gitignored / stripped by the Hub mirror.
+#
+# GCR mirror + ignore-scripts + ENV VITE_AUTH_ENABLED (wrapper treats a missing
+# .grok file as empty and lets process.env win). Anatomy Space already proved
+# this FROM line on the same factory.
 FROM mirror.gcr.io/library/node:22-bookworm-slim
 
 WORKDIR /app
 ENV npm_config_cache=/tmp/npm-cache
 ENV NPM_CONFIG_IGNORE_SCRIPTS=true
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV HOST=0.0.0.0
+ENV PORT=7860
+ENV NODE_ENV=development
+ENV VITE_AUTH_ENABLED=false
 
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -23,12 +32,7 @@ COPY tsconfig.json ./
 COPY eslint.config.mjs ./
 COPY LICENSE ./
 COPY .prettierrc ./
-COPY .grok ./.grok
-
-ENV HOST=0.0.0.0
-ENV PORT=7860
-ENV NODE_ENV=development
-ENV VITE_AUTH_ENABLED=false
+RUN mkdir -p .grok && printf '{"VITE_AUTH_ENABLED":"false"}\n' > .grok/app-env.json
 
 EXPOSE 7860
 
