@@ -55,7 +55,7 @@ describe("cut registry", () => {
   });
 
   it("essay rows land on the kernel that enforces them", () => {
-    assert.equal(labNav("govenvelope").search?.cut, "greenlight");
+    assert.equal(labNav("govenvelope").search?.cut, "govsign");
     assert.equal(labNav("bindforge").search?.cut, "greenlight");
     assert.equal(labNav("receiptrail").search?.cut, "bay");
     assert.equal(labNav("joulenull").play, "anatomy");
@@ -65,6 +65,7 @@ describe("cut registry", () => {
   it("training plays are not armed", () => {
     assert.equal(CUTS.find((c) => c.id === "moons-loss")?.arm, false);
     assert.equal(CUTS.find((c) => c.id === "abstain")?.arm, false);
+    assert.equal(CUTS.find((c) => c.id === "embed-replay")?.arm, false);
     assert.ok(ARM_JOBS.every((j) => j.play !== "moons" && j.play !== "khipu"));
   });
 });

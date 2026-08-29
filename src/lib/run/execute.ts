@@ -12,6 +12,10 @@ import { runAyni } from "@/lib/math/ayni";
 import { runShard, SHARD_N } from "@/lib/math/shard";
 import { runBay } from "@/lib/math/bay";
 import { runGreenLight } from "@/lib/math/greenlight";
+import { runInvariants } from "@/lib/math/invariants";
+import { runGovSign } from "@/lib/math/govsign";
+import { runPrefix } from "@/lib/math/prefix";
+import { runRoute } from "@/lib/math/route";
 import { randomMat } from "@/lib/math/tensor";
 import type { Mat } from "@/lib/math/tensor";
 import type { PlaySlug } from "@/lib/types";
@@ -330,6 +334,68 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
         kind: "kernel",
         note: y.reason,
         extra: { checks: y.checks, energy: y.energy, conjecture1: y.conjecture1 },
+      };
+    }
+    if (cut === NAN_CUT.invariants) {
+      const y = runInvariants({
+        paintSorry: params.paintSorry ?? 0,
+        claimProven: params.claimProven ?? 0,
+        stampJoule: params.stampJoule ?? 0,
+        breakChain: params.breakChain ?? 0,
+        foldLean: params.foldLean ?? 0,
+      });
+      return {
+        metrics: { broken: y.broken, blocked: y.blocked, hold: y.hold },
+        boundMetric: "broken",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.invariants",
+        version: 1,
+        kind: "kernel",
+        note: y.reason,
+        extra: { checks: y.checks, energy: y.energy },
+      };
+    }
+    if (cut === NAN_CUT.govsign) {
+      const y = runGovSign(seed, params.tamper ?? 0);
+      return {
+        metrics: { broken: y.broken, hold: y.hold },
+        boundMetric: "broken",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.govsign",
+        version: 1,
+        kind: "kernel",
+        note: y.reason,
+        extra: { digest: y.digest, signing: y.signing, payloadType: y.payloadType },
+      };
+    }
+    if (cut === NAN_CUT.prefix) {
+      const y = runPrefix(seed, params.hijack ?? 0);
+      return {
+        metrics: { broken: y.broken, hold: y.hold, hitOk: y.hitOk },
+        boundMetric: "broken",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.prefix",
+        version: 1,
+        kind: "kernel",
+        note: y.reason,
+        extra: { nodes: y.nodes, hit: y.hit, query: y.query },
+      };
+    }
+    if (cut === NAN_CUT.route) {
+      const y = runRoute(seed, params.tamper ?? 0);
+      return {
+        metrics: { broken: y.broken, hold: y.hold },
+        boundMetric: "broken",
+        boundEps: 0,
+        direction: "lte",
+        subjectId: "k.route",
+        version: 1,
+        kind: "kernel",
+        note: y.reason,
+        extra: { assignment: y.assignment, load: y.load, digest: y.digest },
       };
     }
     const tax = loopTax(

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ListOrdered, Scale, Grid3x3, Infinity as InfinityIcon, Columns2, ShieldCheck } from "lucide-react";
+import { ListOrdered, Scale, Grid3x3, Infinity as InfinityIcon, Columns2, ShieldCheck, ListChecks, Stamp, GitBranch, Waypoints } from "lucide-react";
 import { Panel, Button, Badge, HonestyChip } from "@/components/ui/primitives";
 import { useLab } from "@/store/lab";
 import { denyByDefault } from "@/lib/math/blocked";
@@ -15,6 +15,10 @@ import { runAyni } from "@/lib/math/ayni";
 import { countLive, runShard, SHARD_K, SHARD_N, toggleMask } from "@/lib/math/shard";
 import { evaluateBay } from "@/lib/math/bay";
 import { evaluateGreenLight } from "@/lib/math/greenlight";
+import { evaluateInvariants } from "@/lib/math/invariants";
+import { runGovSign } from "@/lib/math/govsign";
+import { runPrefix } from "@/lib/math/prefix";
+import { runRoute } from "@/lib/math/route";
 import { ARI } from "@/lib/szl/define";
 import {
   isNanCut,
@@ -66,6 +70,30 @@ const CUT_META: Record<
     lean: "F19 fragment",
     blurb: "Decreasing measure on an agent loop. Halt is fail-closed. Energy UNAVAILABLE.",
   },
+  invariants: {
+    title: "Invariants",
+    quechua: "Kay",
+    lean: "doctrine",
+    blurb: "Locked-8, Conjecture 1 OPEN, energy UNAVAILABLE, chain holds. Break one — BLOCKED.",
+  },
+  govsign: {
+    title: "GovEnvelope",
+    quechua: "Sello",
+    lean: "DSSE",
+    blurb: "STRUCTURAL-ONLY envelope. Tamper the payload after digest — BLOCKED. Never a fake key.",
+  },
+  prefix: {
+    title: "PrefixWitness",
+    quechua: "Ñawpaq",
+    lean: "radix",
+    blurb: "Cached prefix KV is digested. Poison the cache after the digest — BLOCKED. Not SGLang.",
+  },
+  route: {
+    title: "RouteWitness",
+    quechua: "K'allma",
+    lean: "MoE",
+    blurb: "Expert assignment is digested. Swap an expert after routing — BLOCKED. Not Mixtral.",
+  },
 };
 
 export function FrontierLab({
@@ -94,6 +122,11 @@ export function FrontierLab({
   const [paintSorry, setPaintSorry] = useState(0);
   const [claimProven, setClaimProven] = useState(0);
   const [stampJoule, setStampJoule] = useState(0);
+  const [breakChain, setBreakChain] = useState(0);
+  const [foldLean, setFoldLean] = useState(0);
+  const [envelopeTamper, setEnvelopeTamper] = useState(0);
+  const [prefixHijack, setPrefixHijack] = useState(0);
+  const [routeTamper, setRouteTamper] = useState(0);
   const tax = OUROBOROS_SELFCHECK;
 
   const chaski = useMemo(
@@ -110,6 +143,20 @@ export function FrontierLab({
     () => evaluateGreenLight({ paintSorry, claimProven, stampJoule }),
     [paintSorry, claimProven, stampJoule],
   );
+  const inv = useMemo(
+    () =>
+      evaluateInvariants({
+        paintSorry,
+        claimProven,
+        stampJoule,
+        breakChain,
+        foldLean,
+      }),
+    [paintSorry, claimProven, stampJoule, breakChain, foldLean],
+  );
+  const envelope = useMemo(() => runGovSign(seed, envelopeTamper), [seed, envelopeTamper]);
+  const prefix = useMemo(() => runPrefix(seed, prefixHijack), [seed, prefixHijack]);
+  const routed = useMemo(() => runRoute(seed, routeTamper), [seed, routeTamper]);
 
   function pick(id: string) {
     const nav = labNav(id);
@@ -157,6 +204,18 @@ export function FrontierLab({
         claimProven,
         stampJoule,
       });
+    if (active === "invariants")
+      return onRun({
+        cut: NAN_CUT.invariants,
+        paintSorry,
+        claimProven,
+        stampJoule,
+        breakChain,
+        foldLean,
+      });
+    if (active === "govsign") return onRun({ cut: NAN_CUT.govsign, tamper: envelopeTamper });
+    if (active === "prefix") return onRun({ cut: NAN_CUT.prefix, hijack: prefixHijack });
+    if (active === "route") return onRun({ cut: NAN_CUT.route, tamper: routeTamper });
     return onRun({ cut: NAN_CUT.looptax, allow: 1, lambdaPass: 1 });
   }
 
@@ -255,6 +314,42 @@ export function FrontierLab({
             onJoule={setStampJoule}
           />
         )}
+        {active === "invariants" && (
+          <InvariantStage
+            inv={inv}
+            paintSorry={paintSorry}
+            claimProven={claimProven}
+            stampJoule={stampJoule}
+            breakChain={breakChain}
+            foldLean={foldLean}
+            onPaint={setPaintSorry}
+            onClaim={setClaimProven}
+            onJoule={setStampJoule}
+            onChain={setBreakChain}
+            onFold={setFoldLean}
+          />
+        )}
+        {active === "govsign" && (
+          <GovStage
+            envelope={envelope}
+            tamper={envelopeTamper}
+            onTamper={setEnvelopeTamper}
+          />
+        )}
+        {active === "prefix" && (
+          <PrefixStage
+            run={prefix}
+            hijack={prefixHijack}
+            onHijack={setPrefixHijack}
+          />
+        )}
+        {active === "route" && (
+          <RouteStage
+            run={routed}
+            tamper={routeTamper}
+            onTamper={setRouteTamper}
+          />
+        )}
         {active === "looptax" && (
           <LoopStage
             tax={tax}
@@ -334,6 +429,14 @@ export function FrontierLab({
                   ? "Push Evidence Bay"
                   : active === "greenlight"
                     ? "Green-light this bound"
+                    : active === "invariants"
+                      ? "Check invariants"
+                    : active === "govsign"
+                        ? "Seal envelope"
+                        : active === "prefix"
+                          ? "Check prefix cache"
+                          : active === "route"
+                            ? "Check expert route"
                     : "Push Ñan"
         }
         onRun={() => void runActive()}
@@ -687,6 +790,172 @@ function GreenStage({
         ))}
       </ul>
       <p className="text-sm text-muted">{green.reason}</p>
+    </div>
+  );
+}
+
+function InvariantStage({
+  inv,
+  paintSorry,
+  claimProven,
+  stampJoule,
+  breakChain,
+  foldLean,
+  onPaint,
+  onClaim,
+  onJoule,
+  onChain,
+  onFold,
+}: {
+  inv: ReturnType<typeof evaluateInvariants>;
+  paintSorry: number;
+  claimProven: number;
+  stampJoule: number;
+  breakChain: number;
+  foldLean: number;
+  onPaint: (v: number) => void;
+  onClaim: (v: number) => void;
+  onJoule: (v: number) => void;
+  onChain: (v: number) => void;
+  onFold: (v: number) => void;
+}) {
+  const toggles = [
+    { on: paintSorry, set: onPaint, label: "Paint a sorry green" },
+    { on: foldLean, set: onFold, label: "Fold experimental Lean into locked-8" },
+    { on: claimProven, set: onClaim, label: "Claim uniqueness proven" },
+    { on: stampJoule, set: onJoule, label: "Stamp a joule" },
+    { on: breakChain, set: onChain, label: "Break receipt chain" },
+  ] as const;
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <ListChecks className="size-4 text-accent" />
+        <Badge tone={inv.hold ? "live" : "blocked"}>{inv.hold ? "HOLD" : "BROKEN"}</Badge>
+        <span className="font-mono text-[11px] text-muted">broken {inv.broken}</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {toggles.map((t) => (
+          <Button key={t.label} type="button" variant={t.on ? "danger" : "ghost"} onClick={() => t.set(t.on ? 0 : 1)}>
+            {t.on ? "undo · " : ""}
+            {t.label}
+          </Button>
+        ))}
+      </div>
+      <ul className="space-y-1 font-mono text-[11px]">
+        {inv.checks.map((c) => (
+          <li key={c.id} className={c.ok ? "text-live" : "text-blocked"}>
+            {c.ok ? "hold" : "fail"} · {c.id} · {c.detail}
+          </li>
+        ))}
+      </ul>
+      <p className={`text-sm ${inv.hold ? "text-live" : "text-blocked"}`}>{inv.reason}</p>
+    </div>
+  );
+}
+
+function GovStage({
+  envelope,
+  tamper,
+  onTamper,
+}: {
+  envelope: ReturnType<typeof runGovSign>;
+  tamper: number;
+  onTamper: (v: number) => void;
+}) {
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Stamp className="size-4 text-accent" />
+        <Badge tone={envelope.hold ? "live" : "blocked"}>{envelope.hold ? "SEALED" : "BROKEN"}</Badge>
+        <span className="font-mono text-[11px] text-muted">{envelope.signing}</span>
+      </div>
+      <p className="font-mono text-[11px] text-subtle">
+        {envelope.payloadType} · digest {envelope.digest}
+      </p>
+      <pre className="overflow-x-auto rounded-md border border-border bg-elevated p-3 font-mono text-[11px] text-muted">
+        {envelope.payload}
+      </pre>
+      <Button type="button" variant={tamper ? "danger" : "ghost"} onClick={() => onTamper(tamper ? 0 : 1)}>
+        {tamper ? "undo · restore payload" : "Mutate payload after digest"}
+      </Button>
+      <p className={`text-sm ${envelope.hold ? "text-live" : "text-blocked"}`}>{envelope.reason}</p>
+    </div>
+  );
+}
+
+function PrefixStage({
+  run,
+  hijack,
+  onHijack,
+}: {
+  run: ReturnType<typeof runPrefix>;
+  hijack: number;
+  onHijack: (v: number) => void;
+}) {
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <GitBranch className="size-4 text-accent" />
+        <Badge tone={run.hold ? "live" : "blocked"}>{run.hold ? "CACHE HOLDS" : "HIJACKED"}</Badge>
+        <span className="font-mono text-[11px] text-muted">
+          hit {run.hit} · query {run.query}
+        </span>
+      </div>
+      <ul className="space-y-1 font-mono text-[11px]">
+        {run.nodes.map((n) => (
+          <li
+            key={n.prefix}
+            className={n.prefix === run.hit ? (run.hold ? "text-live" : "text-blocked") : "text-muted"}
+          >
+            {n.prefix} · {n.digest}
+          </li>
+        ))}
+      </ul>
+      <Button type="button" variant={hijack ? "danger" : "ghost"} onClick={() => onHijack(hijack ? 0 : 1)}>
+        {hijack ? "undo · restore cache" : "Poison cached KV after digest"}
+      </Button>
+      <p className={`text-sm ${run.hold ? "text-live" : "text-blocked"}`}>{run.reason}</p>
+    </div>
+  );
+}
+
+function RouteStage({
+  run,
+  tamper,
+  onTamper,
+}: {
+  run: ReturnType<typeof runRoute>;
+  tamper: number;
+  onTamper: (v: number) => void;
+}) {
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Waypoints className="size-4 text-accent" />
+        <Badge tone={run.hold ? "live" : "blocked"}>{run.hold ? "ROUTE HOLDS" : "SWAPPED"}</Badge>
+        <span className="font-mono text-[11px] text-muted">
+          {run.n} tok · {run.experts} experts
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {run.assignment.map((e, i) => (
+          <span
+            key={i}
+            className={`rounded-md border px-2 py-1 font-mono text-[11px] ${
+              i === 0 && tamper ? "border-blocked/40 bg-blocked/10 text-blocked" : "border-border bg-elevated text-muted"
+            }`}
+          >
+            t{i}→e{e}
+          </span>
+        ))}
+      </div>
+      <p className="font-mono text-[11px] text-subtle">
+        load [{run.load.join(", ")}] · digest {run.digest}
+      </p>
+      <Button type="button" variant={tamper ? "danger" : "ghost"} onClick={() => onTamper(tamper ? 0 : 1)}>
+        {tamper ? "undo · restore assignment" : "Swap expert 0 after routing"}
+      </Button>
+      <p className={`text-sm ${run.hold ? "text-live" : "text-blocked"}`}>{run.reason}</p>
     </div>
   );
 }
