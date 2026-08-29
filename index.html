@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>SZL KHIPU lab</title>
   <style>
-    :root { --bg:#07090d; --fg:#e8edf2; --muted:#8b95a3; --accent:#3af4c8; --line:rgba(232,237,242,.12); --surf:#0d1520; }
+    :root { --bg:#07090d; --fg:#e8edf2; --muted:#8b95a3; --accent:#3af4c8; --line:rgba(232,237,242,.12); --surf:#0d1520; --false:#d76a6a; --gold:#e8c074; }
     * { box-sizing: border-box; }
     body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 "Segoe UI",system-ui,sans-serif; }
     header, main { max-width:920px; margin:0 auto; padding:24px 20px; }
@@ -17,42 +17,107 @@
     input[type=range] { width:100%; accent-color:var(--accent); }
     .mono { font-family: ui-monospace, Menlo, monospace; }
     .muted { color:var(--muted); font-size:14px; }
+    .down { color:var(--false); }
+    button { min-height:44px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surf); color:var(--fg); font:600 12px ui-monospace,monospace; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; }
+    button.on { border-color:var(--false); color:var(--false); }
+    button.primary { border-color:var(--accent); background:var(--accent); color:var(--bg); }
+    .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .orgs { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-top:12px; }
+    .org { border:1px solid var(--line); border-radius:10px; padding:10px; font:12px ui-monospace,Menlo,monospace; }
+    .org.down { border-color:var(--false); color:var(--false); }
   </style>
 </head>
 <body>
   <header>
     <p class="kicker">SZL Holdings · Knot the run · Hash the proof</p>
     <h1>KHIPU lab</h1>
-    <p class="muted">Holographic kernel atlas. Full TanStack app lives on GitHub. This Space boots without npm.</p>
+    <p class="muted">Holographic kernel atlas. Full TanStack app lives on GitHub. This Space boots without npm. Λ uniqueness is Conjecture 1 — never a theorem. Energy UNAVAILABLE. proven_trust false.</p>
   </header>
   <main>
     <section class="card">
       <h2>Λ playground</h2>
-      <p class="muted">Weighted geometric mean. Uniqueness is Conjecture 1.</p>
+      <p class="muted">Weighted geometric mean. A pass is advisory. Gold means OPEN.</p>
       <p class="mono" id="lam" style="font-size:28px;color:var(--accent)">—</p>
       <div id="sliders"></div>
+    </section>
+    <section class="card" style="margin-top:12px">
+      <h2>GreenLight · Ari</h2>
+      <p class="muted">Signed assent. Paint a sorry, claim a theorem, stamp a joule — BLOCKED. Never amber.</p>
+      <p class="mono" id="green">—</p>
+      <div class="row">
+        <button type="button" id="paint">Paint a sorry green</button>
+        <button type="button" id="claim">Claim Λ proven</button>
+        <button type="button" id="joule">Stamp MEASURED joules</button>
+        <button type="button" class="primary" id="push-green">Green-light this bound</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:12px">
+      <h2>Anatomy · five organs</h2>
+      <p class="muted">Any DOWN organ or WILLAY veto blocks the body. Not a 3D rehost.</p>
+      <p class="mono" id="anatomy">—</p>
+      <div class="orgs" id="orgs"></div>
+      <div class="row">
+        <button type="button" id="kill-heart">Zero HEART</button>
+        <button type="button" id="fake-joule">Fabricate a joule</button>
+        <button type="button" class="primary" id="walk">Walk anatomy</button>
+      </div>
     </section>
     <h2>Organs</h2>
     <div class="grid">
       <a class="card" href="https://huggingface.co/spaces/SZLHOLDINGS/szl-khipu">szl-khipu kernels</a>
-      <a class="card" href="https://huggingface.co/SZLHOLDINGS/szl-formulas">21 formulas</a>
-      <a class="card" href="https://huggingface.co/SZLHOLDINGS/szl-lambda-gate">lambda-gate</a>
+      <a class="card" href="https://holdings.a-11-oy.com/khipu/">Python FE+BE silhouette</a>
       <a class="card" href="https://github.com/szl-holdings/khipu-lab">GitHub source</a>
+      <a class="card" href="https://a-11-oy.com">Product</a>
     </div>
   </main>
   <script>
-    const axes = Array(13).fill(0.92); axes[0]=0.97; axes[1]=0.96;
+    const axes = Array(13).fill(0.90); axes[0]=0.95; axes[1]=0.95;
     const box = document.getElementById("sliders");
+    const flags = { paint_sorry:0, claim_proven:0, stamp_joule:0 };
     function render() {
       box.innerHTML = axes.map((v,i)=>`<label class="muted mono">A${i+1} ${v.toFixed(2)}<input type="range" min="0.5" max="1" step="0.01" value="${v}" data-i="${i}"></label>`).join("");
       box.querySelectorAll("input").forEach(el => el.oninput = (e) => { axes[+e.target.dataset.i] = +e.target.value; ping(); render(); });
     }
-    async function ping() {
-      const r = await fetch("/api/lambda", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({axes}) });
-      const j = await r.json();
-      document.getElementById("lam").textContent = (j.lambda ?? 0).toFixed(4) + "  " + (j.decision||"");
+    async function post(path, body) {
+      const r = await fetch(path, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body||{}) });
+      return r.json();
     }
-    render(); ping();
+    async function ping() {
+      const j = await post("/api/lambda", {axes});
+      const el = document.getElementById("lam");
+      el.textContent = (j.lambda ?? 0).toFixed(4) + "  " + (j.decision||"");
+      el.className = "mono" + (j.blocked ? " down" : "");
+    }
+    async function green() {
+      const j = await post("/api/greenlight", flags);
+      const el = document.getElementById("green");
+      el.textContent = (j.blocked ? "BLOCKED" : "GREEN-LIGHT") + " · " + (j.reason||"");
+      el.className = "mono" + (j.blocked ? " down" : "");
+    }
+    async function anatomy(extra) {
+      const j = await post("/api/anatomy", extra||{});
+      const el = document.getElementById("anatomy");
+      el.textContent = (j.live_count ?? "—") + "/5 " + (j.blocked ? "BLOCKED" : "LIVE") + " · " + (j.reason||"");
+      el.className = "mono" + (j.blocked ? " down" : "");
+      document.getElementById("orgs").innerHTML = (j.organs||[]).map(o =>
+        `<div class="org ${o.status==="DOWN"?"down":""}"><b>${o.id}</b><br>${o.status}</div>`
+      ).join("");
+    }
+    function toggle(btn, key) {
+      btn.onclick = () => {
+        flags[key] = flags[key] ? 0 : 1;
+        btn.classList.toggle("on", !!flags[key]);
+        green();
+      };
+    }
+    toggle(document.getElementById("paint"), "paint_sorry");
+    toggle(document.getElementById("claim"), "claim_proven");
+    toggle(document.getElementById("joule"), "stamp_joule");
+    document.getElementById("push-green").onclick = green;
+    document.getElementById("walk").onclick = () => anatomy({});
+    document.getElementById("kill-heart").onclick = () => anatomy({zero_heart:true});
+    document.getElementById("fake-joule").onclick = () => anatomy({fabricate_joule:true});
+    render(); ping(); green(); anatomy({});
   </script>
 </body>
 </html>

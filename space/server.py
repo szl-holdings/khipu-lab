@@ -1,4 +1,7 @@
-"""SZL holographic Space — stdlib HTTP. No npm. No Gradio. Port 7860."""
+"""SZL holographic Space — stdlib HTTP. No npm. No Gradio. Port 7860.
+
+Λ uniqueness is Conjecture 1 — OPEN. Energy UNAVAILABLE. proven_trust is always false.
+"""
 from __future__ import annotations
 
 import json
@@ -6,10 +9,21 @@ import math
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 HTML = Path(__file__).with_name("index.html")
 EPS = 1e-9
+YUYAY_FLOORS: tuple[float, ...] = (0.95, 0.95) + (0.90,) * 11
+JSON_PATHS = (
+    "/health",
+    "/healthz",
+    "/version",
+    "/api/version",
+    "/api/lambda",
+    "/api/greenlight",
+    "/api/anatomy",
+)
+HTML_PATHS = ("/", "/index.html")
 
 
 def lambda_aggregate(axes: list[float]) -> float:
@@ -24,6 +38,117 @@ def lambda_aggregate(axes: list[float]) -> float:
     return math.exp(sum(w * math.log(x) for x in axes))
 
 
+def _flag(data: dict, *keys: str) -> int:
+    for k in keys:
+        if k not in data:
+            continue
+        v = data[k]
+        if isinstance(v, bool):
+            return 1 if v else 0
+        if isinstance(v, (int, float)):
+            return 1 if v == 1 else 0
+        if str(v).lower() in ("1", "true", "yes"):
+            return 1
+        return 0
+    return 0
+
+
+def evaluate_greenlight(data: dict) -> dict:
+    paint_sorry = _flag(data, "paint_sorry", "paintSorry")
+    claim_proven = _flag(data, "claim_proven", "claimProven")
+    stamp_joule = _flag(data, "stamp_joule", "stampJoule")
+    checks = [
+        {
+            "id": "sorry",
+            "ok": paint_sorry != 1,
+            "detail": (
+                "BLOCKED · a sorry cannot be painted green"
+                if paint_sorry == 1
+                else "sorry stays sorry · locked-8 is 8, not 21"
+            ),
+        },
+        {
+            "id": "conjecture1",
+            "ok": claim_proven != 1,
+            "detail": (
+                "BLOCKED · proven_trust cannot be true while Λ is Conjecture 1"
+                if claim_proven == 1
+                else "proven_trust locked false · uniqueness OPEN"
+            ),
+        },
+        {
+            "id": "energy",
+            "ok": stamp_joule != 1,
+            "detail": (
+                "BLOCKED · fabricated joule · energy UNAVAILABLE"
+                if stamp_joule == 1
+                else "energy UNAVAILABLE · never a fabricated joule"
+            ),
+        },
+    ]
+    painted = sum(1 for c in checks if not c["ok"])
+    blocked = painted > 0
+    return {
+        "painted": painted,
+        "blocked": blocked,
+        "greenlit": 0 if blocked else 1,
+        "proven_trust": False,
+        "energy": "UNAVAILABLE",
+        "lockedProven": 8,
+        "conjecture1": "OPEN",
+        "checks": checks,
+        "kernel": "LIVE",
+        "reason": (
+            next((c["detail"] for c in checks if not c["ok"]), "promotion blocked")
+            if blocked
+            else "GREEN-LIGHT · LIVE bound · proven_trust false · energy UNAVAILABLE"
+        ),
+    }
+
+
+def evaluate_anatomy(data: dict) -> dict:
+    down = {
+        "brain": bool(_flag(data, "leak_canal", "leakCanal")),
+        "heart": bool(_flag(data, "zero_heart", "zeroHeart")),
+        "circulatory": bool(_flag(data, "tamper_chain", "tamperChain")),
+        "nervous": bool(_flag(data, "fabricate_joule", "fabricateJoule")),
+        "skeleton": bool(_flag(data, "break_skeleton", "breakSkeleton")),
+    }
+    willay = bool(_flag(data, "willay_fire", "willayFire"))
+    live = sum(1 for v in down.values() if not v)
+    blocked = live < 5 or willay
+    organs = [
+        {"id": k, "status": "DOWN" if down[k] else "LIVE"}
+        for k in ("brain", "heart", "circulatory", "nervous", "skeleton")
+    ]
+    if willay:
+        reason = "WILLAY veto · body BLOCKED · proven_trust false · energy UNAVAILABLE"
+    elif blocked:
+        reason = f"organ integrity {live}/5 BLOCKED · Λ advisory · energy UNAVAILABLE · Conjecture 1 OPEN"
+    else:
+        reason = "organ integrity 5/5 LIVE · Λ advisory · energy UNAVAILABLE · Conjecture 1 OPEN"
+    return {
+        "live_count": live,
+        "blocked": blocked,
+        "reason": reason,
+        "organs": organs,
+        "kernel": "LIVE",
+        "energy": "UNAVAILABLE",
+        "proven_trust": False,
+        "uniqueness": "Conjecture 1",
+    }
+
+
+def _query_body(path: str) -> dict:
+    qs = parse_qs(urlparse(path).query)
+    body: dict = {}
+    for k, v in qs.items():
+        body[k] = v[0] if len(v) == 1 else v
+    if "axes" in body and isinstance(body["axes"], str):
+        body["axes"] = [float(x) for x in body["axes"].split(",") if x]
+    return body
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         return
@@ -33,14 +158,25 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _json(self, code: int, payload: dict) -> None:
+        self._send(code, json.dumps(payload).encode(), "application/json")
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,HEAD,OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "content-type")
+        self.end_headers()
 
     def do_HEAD(self) -> None:  # noqa: N802
         """HF probes HEAD. BaseHTTP 501s otherwise."""
         path = urlparse(self.path).path
-        if path in ("/", "/index.html", "/health", "/healthz", "/version", "/api/version"):
-            ctype = "text/html; charset=utf-8" if path in ("/", "/index.html") else "application/json"
+        if path in HTML_PATHS or path in JSON_PATHS:
+            ctype = "text/html; charset=utf-8" if path in HTML_PATHS else "application/json"
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Cache-Control", "no-store")
@@ -50,23 +186,46 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
-        path = urlparse(self.path).path
-        if path in ("/", "/index.html"):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path in HTML_PATHS:
             self._send(200, HTML.read_bytes() if HTML.exists() else b"<h1>SZL</h1>", "text/html; charset=utf-8")
             return
         if path in ("/health", "/healthz"):
-            self._send(
+            self._json(
                 200,
-                b'{"ok":true,"space":"khipu-lab","kernel":"LIVE","uniqueness":"Conjecture 1","energy":"UNAVAILABLE","proven_trust":false,"cuda":"UNAVAILABLE"}',
-                "application/json",
+                {
+                    "ok": True,
+                    "space": "khipu-lab",
+                    "kernel": "LIVE",
+                    "uniqueness": "Conjecture 1",
+                    "energy": "UNAVAILABLE",
+                    "proven_trust": False,
+                    "cuda": "UNAVAILABLE",
+                },
             )
             return
         if path in ("/version", "/api/version"):
-            self._send(
+            self._json(
                 200,
-                b'{"name":"khipu-lab","kind":"hologram","source":"szl-holdings/khipu-lab","proven_trust":false,"energy":"UNAVAILABLE"}',
-                "application/json",
+                {
+                    "name": "khipu-lab",
+                    "kind": "hologram",
+                    "source": "szl-holdings/khipu-lab",
+                    "proven_trust": False,
+                    "energy": "UNAVAILABLE",
+                },
             )
+            return
+        body = _query_body(self.path)
+        if path == "/api/lambda":
+            self._lambda(body)
+            return
+        if path == "/api/greenlight":
+            self._json(200, evaluate_greenlight(body))
+            return
+        if path == "/api/anatomy":
+            self._json(200, evaluate_anatomy(body))
             return
         self._send(404, b"not found", "text/plain")
 
@@ -76,24 +235,46 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(n) if n else b"{}"
         try:
             data = json.loads(raw.decode())
+            if not isinstance(data, dict):
+                data = {}
         except Exception:
             data = {}
         if path == "/api/lambda":
-            axes = [float(x) for x in (data.get("axes") or [])]
-            try:
-                value = lambda_aggregate(axes)
-                sacred = len(axes) >= 2 and (axes[0] < 0.95 or axes[1] < 0.95)
-                body = {
+            self._lambda(data)
+            return
+        if path == "/api/greenlight":
+            self._json(200, evaluate_greenlight(data))
+            return
+        if path == "/api/anatomy":
+            self._json(200, evaluate_anatomy(data))
+            return
+        self._send(404, b"not found", "text/plain")
+
+    def _lambda(self, data: dict) -> None:
+        axes = [float(x) for x in (data.get("axes") or list(YUYAY_FLOORS))]
+        try:
+            value = lambda_aggregate(axes)
+            sacred = value == 0.0 or (len(axes) >= 2 and (axes[0] < 0.95 or axes[1] < 0.95))
+            self._json(
+                200,
+                {
                     "lambda": value,
+                    "blocked": sacred,
                     "decision": "BLOCKED" if sacred else "ADMITTED",
                     "uniqueness": "Conjecture 1",
                     "honesty": "MEASURED",
-                }
-                self._send(200, json.dumps(body).encode(), "application/json")
-            except Exception as exc:
-                self._send(400, json.dumps({"error": str(exc), "honesty": "MEASURED"}).encode(), "application/json")
-            return
-        self._send(404, b"not found", "text/plain")
+                    "proven_trust": False,
+                    "energy": "UNAVAILABLE",
+                    "kernel": "LIVE",
+                    "reason": (
+                        "zero-routed or sacred-axis floor"
+                        if sacred
+                        else "advisory pass — uniqueness remains Conjecture 1 OPEN"
+                    ),
+                },
+            )
+        except Exception as exc:
+            self._json(400, {"error": str(exc), "honesty": "MEASURED", "proven_trust": False})
 
 
 def main() -> None:
