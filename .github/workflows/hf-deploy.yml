@@ -23,24 +23,31 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install huggingface_hub
-      - name: Publish Space SZLHOLDINGS/khipu-lab
+      - name: Publish hologram Space SZLHOLDINGS/khipu-lab
         env:
           HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
         run: |
           python - <<'PY'
-          import os, sys
+          import os, sys, shutil, tempfile
+          from pathlib import Path
           token = os.environ.get("HF_TOKEN") or ""
           if not token:
               print("HF_TOKEN UNAVAILABLE — Space publish skipped. GitHub remains the source. Not fabricated LIVE.")
               sys.exit(0)
           from huggingface_hub import HfApi, create_repo
+          root = Path(".").resolve()
+          staging = Path(tempfile.mkdtemp(prefix="khipu-lab-space-"))
+          for name in ("Dockerfile", "server.py", "index.html", "README.md", "LICENSE"):
+              src = root / name
+              if src.is_file():
+                  shutil.copy2(src, staging / name)
           api = HfApi(token=token)
           create_repo("SZLHOLDINGS/khipu-lab", repo_type="space", space_sdk="docker", exist_ok=True, token=token)
           api.upload_folder(
-              folder_path=".",
+              folder_path=str(staging),
               repo_id="SZLHOLDINGS/khipu-lab",
               repo_type="space",
-              ignore_patterns=[".git*", "node_modules/*", ".venv/*", "screenshots/*"],
+              commit_message="khipu-lab hologram — GreenLight + Anatomy LIVE, no npm",
           )
-          print("published SZLHOLDINGS/khipu-lab")
+          print("published hologram SZLHOLDINGS/khipu-lab")
           PY
