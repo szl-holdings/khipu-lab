@@ -36,13 +36,37 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_HEAD(self) -> None:  # noqa: N802
+        """HF probes HEAD. BaseHTTP 501s otherwise."""
+        path = urlparse(self.path).path
+        if path in ("/", "/index.html", "/health", "/healthz", "/version", "/api/version"):
+            ctype = "text/html; charset=utf-8" if path in ("/", "/index.html") else "application/json"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
+
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         if path in ("/", "/index.html"):
             self._send(200, HTML.read_bytes() if HTML.exists() else b"<h1>SZL</h1>", "text/html; charset=utf-8")
             return
         if path in ("/health", "/healthz"):
-            self._send(200, b'{"ok":true}', "application/json")
+            self._send(
+                200,
+                b'{"ok":true,"space":"khipu-lab","kernel":"LIVE","uniqueness":"Conjecture 1","energy":"UNAVAILABLE","proven_trust":false,"cuda":"UNAVAILABLE"}',
+                "application/json",
+            )
+            return
+        if path in ("/version", "/api/version"):
+            self._send(
+                200,
+                b'{"name":"khipu-lab","kind":"hologram","source":"szl-holdings/khipu-lab","proven_trust":false,"energy":"UNAVAILABLE"}',
+                "application/json",
+            )
             return
         self._send(404, b"not found", "text/plain")
 

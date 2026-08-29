@@ -160,7 +160,7 @@ export const PLAYS: Array<{
     name: "Ñan",
     quechua: "Ñan",
     kind: "frontier",
-    blurb: "Chaski, Ayni, ShardWitness. Beat a recorded bound.",
+    blurb: "GreenLight, Chaski, Ayni, ShardWitness. Beat a recorded bound.",
   },
   {
     slug: "anatomy",
