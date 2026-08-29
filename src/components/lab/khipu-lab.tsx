@@ -3,10 +3,9 @@ import { Panel } from "@/components/ui/primitives";
 import {
   evalKhipu,
   initKhipu,
+  khipuFromBuffers,
   stepKhipu,
   synthKhipu,
-  KHIPU_V,
-  KHIPU_D,
   type KhipuWeights,
 } from "@/lib/train/khipu";
 import {
@@ -31,16 +30,6 @@ import {
 import { loadWeights, saveWeights } from "@/lib/persist/weights";
 import { RunBar } from "./run-bar";
 import type { RunFace } from "@/lib/run/execute";
-
-function khipuFromBuffers(buffers?: Record<string, Float32Array> | null): KhipuWeights | null {
-  if (!buffers) return null;
-  const { E, W, b, Wc } = buffers;
-  if (!E || !W || !b || !Wc) return null;
-  if (E.length !== KHIPU_V * KHIPU_D || W.length !== 2 * KHIPU_D || b.length !== 2 || Wc.length !== KHIPU_D) {
-    return null;
-  }
-  return { E, W, b, Wc };
-}
 
 function take<T>(arr: T[], start: number, size: number): T[] {
   const out: T[] = [];

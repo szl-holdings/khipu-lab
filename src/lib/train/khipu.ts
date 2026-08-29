@@ -131,6 +131,22 @@ export function stepKhipu(w: KhipuWeights, batch: KhipuExample[], lr: number) {
   return loss / n;
 }
 
+export function khipuFromBuffers(buffers?: Record<string, Float32Array> | null): KhipuWeights | null {
+  if (!buffers) return null;
+  const { E, W, b, Wc } = buffers;
+  if (!E || !W || !b || !Wc) return null;
+  if (E.length !== V * D || W.length !== 2 * D || b.length !== 2 || Wc.length !== D) return null;
+  return { E, W, b, Wc };
+}
+
+export function inferKhipu(
+  w: KhipuWeights,
+  query: string,
+  handles: Array<{ id: string; note: string }>,
+) {
+  return forwardKhipu(w, { query, handles, decision: 0, cite: [] });
+}
+
 export function evalKhipu(w: KhipuWeights, data: KhipuExample[]) {
   let plan = 0;
   let abstain = 0;

@@ -66,6 +66,6 @@ describe("cut registry", () => {
     assert.equal(CUTS.find((c) => c.id === "moons-loss")?.arm, false);
     assert.equal(CUTS.find((c) => c.id === "abstain")?.arm, false);
     assert.equal(CUTS.find((c) => c.id === "embed-replay")?.arm, false);
-    assert.ok(ARM_JOBS.every((j) => j.play !== "moons" && j.play !== "khipu"));
+    assert.ok(ARM_JOBS.every((j) => j.play !== "moons" && j.play !== "khipu" && j.play !== "infer"));
   });
 });

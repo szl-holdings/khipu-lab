@@ -20,6 +20,7 @@ import { randomMat } from "@/lib/math/tensor";
 import type { Mat } from "@/lib/math/tensor";
 import type { PlaySlug } from "@/lib/types";
 import { NAN_CUT } from "@/lib/catalog/plays";
+import { benchKernels } from "@/lib/run/bench";
 
 export type RunFace = {
   metrics: Record<string, number>;
@@ -421,6 +422,24 @@ export function runPlay(play: PlaySlug, seed: number, params: Record<string, num
       kind: "frontier",
       note: `${tax.exit} · ${gate.reason} · energy UNAVAILABLE`,
       extra: { tax, gate },
+    };
+  }
+  if (play === "infer") {
+    const rows = benchKernels(seed);
+    const passed = rows.filter((r) => r.pass).length;
+    return {
+      metrics: { passed, total: rows.length, failed: rows.length - passed },
+      boundMetric: "passed",
+      boundEps: rows.length,
+      direction: "gte",
+      subjectId: "k.bench",
+      version: 1,
+      kind: "kernel",
+      note:
+        passed === rows.length
+          ? `Estate bench ${passed}/${rows.length} HOLD · CUDA UNAVAILABLE · proven_trust false`
+          : `Estate bench ${passed}/${rows.length} · FAIL kept · never painted`,
+      extra: { rows },
     };
   }
   if (play === "anatomy") {

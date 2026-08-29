@@ -15,6 +15,7 @@ import { KhipuLab } from "./khipu-lab";
 import { FrontierLab } from "./frontier-lab";
 import { NormLab } from "./norm-lab";
 import { AnatomyLab } from "./anatomy-lab";
+import { InferLab } from "./infer-lab";
 import { frontierForSubject } from "@/lib/catalog/plays";
 
 export function LabStage({ play, cut }: { play: PlaySlug; cut?: string }) {
@@ -115,6 +116,9 @@ export function LabStage({ play, cut }: { play: PlaySlug; cut?: string }) {
       )}
       {play === "khipu" && (
         <KhipuLab seed={seed} running={running} setRunning={setRunning} mint={mintFromMetrics} />
+      )}
+      {play === "infer" && (
+        <InferLab seed={seed} running={running} setRunning={setRunning} mint={mintFromMetrics} />
       )}
 
       {last && last.subject && (
