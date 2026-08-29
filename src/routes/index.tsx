@@ -110,6 +110,15 @@ function Home() {
             Public estate ·{" "}
             <a
               className="text-accent underline-offset-2 hover:underline"
+              href="https://holdings.a-11-oy.com/khipu/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Python FE+BE
+            </a>
+            {" · "}
+            <a
+              className="text-accent underline-offset-2 hover:underline"
               href="https://github.com/szl-holdings/szl-khipu"
               target="_blank"
               rel="noreferrer"

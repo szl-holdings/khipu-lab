@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ListOrdered, Scale, Grid3x3, Infinity as InfinityIcon, Columns2 } from "lucide-react";
+import { ListOrdered, Scale, Grid3x3, Infinity as InfinityIcon, Columns2, ShieldCheck } from "lucide-react";
 import { Panel, Button, Badge, HonestyChip } from "@/components/ui/primitives";
 import { useLab } from "@/store/lab";
 import { denyByDefault } from "@/lib/math/blocked";
@@ -14,6 +14,7 @@ import { runChaski } from "@/lib/math/chaski";
 import { runAyni } from "@/lib/math/ayni";
 import { countLive, runShard, SHARD_K, SHARD_N, toggleMask } from "@/lib/math/shard";
 import { evaluateBay } from "@/lib/math/bay";
+import { evaluateGreenLight } from "@/lib/math/greenlight";
 import {
   isNanCut,
   labNav,
@@ -28,6 +29,12 @@ const CUT_META: Record<
   NanCutId,
   { title: string; quechua: string; lean: string; blurb: string }
 > = {
+  greenlight: {
+    title: "GreenLight",
+    quechua: "Ari",
+    lean: "promotion",
+    blurb: "Signed assent. Paint a sorry, claim a theorem, stamp a joule — BLOCKED. Never amber.",
+  },
   chaski: {
     title: "Chaski FIFO",
     quechua: "Chaski",
@@ -73,7 +80,7 @@ export function FrontierLab({
 }) {
   const navigate = useNavigate();
   const { frontiers, receipts } = useLab();
-  const active: NanCutId = isNanCut(cut) ? cut : "chaski";
+  const active: NanCutId = isNanCut(cut) ? cut : "greenlight";
   const [tamper, setTamper] = useState<string>("untouched");
   const [gate, setGate] = useState(() => denyByDefault(true, false, true));
   const [reorder, setReorder] = useState(0);
@@ -83,6 +90,9 @@ export function FrontierLab({
   const [proofIntoProduct, setProofIntoProduct] = useState(0);
   const [hubAsProof, setHubAsProof] = useState(0);
   const [spaceAsReceipt, setSpaceAsReceipt] = useState(0);
+  const [paintSorry, setPaintSorry] = useState(0);
+  const [claimProven, setClaimProven] = useState(0);
+  const [stampJoule, setStampJoule] = useState(0);
   const tax = OUROBOROS_SELFCHECK;
 
   const chaski = useMemo(
@@ -94,6 +104,10 @@ export function FrontierLab({
   const bay = useMemo(
     () => evaluateBay({ proofIntoProduct, hubAsProof, spaceAsReceipt }),
     [proofIntoProduct, hubAsProof, spaceAsReceipt],
+  );
+  const green = useMemo(
+    () => evaluateGreenLight({ paintSorry, claimProven, stampJoule }),
+    [paintSorry, claimProven, stampJoule],
   );
 
   function pick(id: string) {
@@ -135,6 +149,13 @@ export function FrontierLab({
         hubAsProof,
         spaceAsReceipt,
       });
+    if (active === "greenlight")
+      return onRun({
+        cut: NAN_CUT.greenlight,
+        paintSorry,
+        claimProven,
+        stampJoule,
+      });
     return onRun({ cut: NAN_CUT.looptax, allow: 1, lambdaPass: 1 });
   }
 
@@ -151,10 +172,9 @@ export function FrontierLab({
           </Button>
         </div>
         <p className="mt-1 text-sm text-muted">
-          Three new named bounds plus Evidence Bay. Hub is transport. a11oy.net is proof.
-          a-11-oy.com is the product. BLOCKED never writes the bound.
+          A sorry cannot be painted green. BLOCKED never writes the bound.
         </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {(Object.keys(CUT_META) as NanCutId[]).map((id) => {
             const f = frontiers.find((x) => x.id === id);
             const on = id === active;
@@ -164,22 +184,15 @@ export function FrontierLab({
                 type="button"
                 onClick={() => pick(id)}
                 className={cn(
-                  "rounded-lg border px-4 py-3 text-left transition-colors duration-150",
+                  "shrink-0 rounded-full border px-3 py-2 text-sm transition-colors duration-150",
                   on
-                    ? "border-accent bg-accent/10"
-                    : "border-border bg-elevated hover:border-border-strong",
+                    ? "border-transparent bg-accent text-accent-fg"
+                    : "border-border bg-elevated text-muted hover:text-fg",
                 )}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-display text-lg">{CUT_META[id].title}</span>
-                  <Badge tone={on ? "accent" : "muted"}>{CUT_META[id].lean}</Badge>
-                </div>
-                <p className="mt-1 text-xs text-muted">{CUT_META[id].blurb}</p>
-                {f ? (
-                  <p className="mt-2 font-mono text-[11px] tabular text-subtle">
-                    {f.direction} {fmtBound(f.best)} · n={f.attempts}
-                    {f.beatenAt ? " · beaten" : ""}
-                  </p>
+                {CUT_META[id].title}
+                {f?.beatenAt ? (
+                  <span className="ml-2 font-mono text-[10px] opacity-70">beaten</span>
                 ) : null}
               </button>
             );
@@ -228,6 +241,17 @@ export function FrontierLab({
             onProof={setProofIntoProduct}
             onHub={setHubAsProof}
             onSpace={setSpaceAsReceipt}
+          />
+        )}
+        {active === "greenlight" && (
+          <GreenStage
+            green={green}
+            paintSorry={paintSorry}
+            claimProven={claimProven}
+            stampJoule={stampJoule}
+            onPaint={setPaintSorry}
+            onClaim={setClaimProven}
+            onJoule={setStampJoule}
           />
         )}
         {active === "looptax" && (
@@ -307,7 +331,9 @@ export function FrontierLab({
                 ? "Push ShardWitness"
                 : active === "bay"
                   ? "Push Evidence Bay"
-                  : "Push Ñan"
+                  : active === "greenlight"
+                    ? "Green-light this bound"
+                    : "Push Ñan"
         }
         onRun={() => void runActive()}
       />
@@ -571,6 +597,93 @@ function BayStage({
         ))}
       </div>
       <p className="text-sm text-muted">{bay.reason}</p>
+    </div>
+  );
+}
+
+function GreenStage({
+  green,
+  paintSorry,
+  claimProven,
+  stampJoule,
+  onPaint,
+  onClaim,
+  onJoule,
+}: {
+  green: ReturnType<typeof evaluateGreenLight>;
+  paintSorry: number;
+  claimProven: number;
+  stampJoule: number;
+  onPaint: (v: number) => void;
+  onClaim: (v: number) => void;
+  onJoule: (v: number) => void;
+}) {
+  const lit = green.greenlit === 1;
+  const toggles = [
+    {
+      on: paintSorry,
+      set: onPaint,
+      label: "Paint a sorry green",
+      hint: "locked-8 is 8",
+    },
+    {
+      on: claimProven,
+      set: onClaim,
+      label: "Claim Λ uniqueness is proven",
+      hint: "Conjecture 1 OPEN",
+    },
+    {
+      on: stampJoule,
+      set: onJoule,
+      label: "Stamp MEASURED joules",
+      hint: "no NVML",
+    },
+  ] as const;
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <ShieldCheck className="size-4 text-accent" />
+        <span
+          className={cn(
+            "grid size-14 place-items-center rounded-full border text-[11px] font-mono uppercase tracking-widest",
+            lit
+              ? "border-live/40 bg-live/20 text-live"
+              : "border-blocked/40 bg-blocked/20 text-blocked",
+          )}
+          aria-label={lit ? "green-light" : "blocked"}
+        >
+          {lit ? "ARI" : "NO"}
+        </span>
+        <div>
+          <Badge tone={lit ? "live" : "blocked"}>{lit ? "GREEN-LIGHT" : "BLOCKED"}</Badge>
+          <p className="mt-1 font-mono text-[11px] text-muted">
+            proven_trust={String(green.provenTrust)} · energy {green.energy} · Λ {green.conjecture1}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        {toggles.map((t) => (
+          <Button
+            key={t.label}
+            type="button"
+            variant={t.on ? "danger" : "ghost"}
+            onClick={() => t.set(t.on ? 0 : 1)}
+          >
+            {t.on ? "undo · " : ""}
+            {t.label}
+            <span className="ml-2 font-mono text-[11px] text-subtle">{t.hint}</span>
+          </Button>
+        ))}
+      </div>
+      <ul className="space-y-1 font-mono text-[11px]">
+        {green.checks.map((c) => (
+          <li key={c.id} className={c.ok ? "text-live" : "text-blocked"}>
+            {c.ok ? "hold" : "fail"} · {c.id} · {c.detail}
+          </li>
+        ))}
+      </ul>
+      <p className="text-sm text-muted">{green.reason}</p>
     </div>
   );
 }

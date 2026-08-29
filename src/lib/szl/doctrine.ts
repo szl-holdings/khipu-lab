@@ -50,6 +50,7 @@ export const QUECHUA = {
   hatun: "great / orchestrator",
   yuyay: "thought / 13-axis conjunctive gate",
   willay: "to tell / signed refusal",
+  ari: "yes / signed green-light / dual of willay",
   chaski: "runner / message FIFO",
   nan: "road / frontier",
   tinkuy: "meeting / command center",
